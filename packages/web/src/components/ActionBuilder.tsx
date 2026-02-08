@@ -24,11 +24,6 @@ export function ActionBuilder({
   onCreate: () => void;
   isDisabled: boolean;
 }) {
-  const missingRequired: string[] = [];
-  if (!actionForm.id.trim()) missingRequired.push("Action ID");
-  if (!actionForm.name.trim()) missingRequired.push("Action Name");
-  if (actionForm.roleIds.length === 0) missingRequired.push("Role");
-
   const selectBase =
     "h-10 w-full rounded-md border border-slate-700 bg-slate-900 px-3 text-sm text-slate-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400 disabled:cursor-not-allowed disabled:opacity-60";
   return (
@@ -40,11 +35,6 @@ export function ActionBuilder({
             <p className="text-xs text-slate-500">
               액션 식별자와 이름은 API 호출에 사용됩니다.
             </p>
-          </div>
-          <div className="rounded-full border border-slate-800 bg-slate-900/70 px-3 py-1 text-xs text-slate-400">
-            {missingRequired.length > 0
-              ? `필수 항목: ${missingRequired.join(", ")}`
-              : "필수 항목 모두 입력됨"}
           </div>
         </div>
         <div className="mt-4 grid gap-4 md:grid-cols-2">
