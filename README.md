@@ -10,6 +10,12 @@ A single-container API gateway for Home Assistant that allows limited, audited a
 - Admin dashboard with session login
 - Single-container deployment
 
+## Screenshots
+
+![Admin Dashboard (placeholder)](docs/assets/screenshot-admin-dashboard.png)
+
+Placeholder image. Replace this file with a real screenshot when ready.
+
 ## Local Development
 
 1. Install dependencies.
