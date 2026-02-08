@@ -251,7 +251,6 @@ export function ActionBuilder({
                       searchPlaceholder="도메인 검색..."
                       emptyText="도메인을 찾을 수 없습니다"
                     />
-                    <p className="text-xs text-slate-500">목록에 없으면 Advanced에서 직접 입력.</p>
                   </div>
                   <div className="space-y-2">
                     <label className="text-xs uppercase text-slate-400">Service</label>
@@ -296,56 +295,6 @@ export function ActionBuilder({
                     </p>
                   </div>
                 </div>
-
-                <details className="mt-4 rounded-md border border-slate-800 bg-slate-900/40 p-3">
-                  <summary className="cursor-pointer text-xs uppercase text-slate-400">
-                    고급 입력
-                  </summary>
-                  <div className="mt-3 grid gap-3 md:grid-cols-3">
-                    <div className="space-y-2">
-                      <label className="text-xs uppercase text-slate-400">Domain (직접 입력)</label>
-                      <Input
-                        placeholder="domain"
-                        value={call.domain}
-                        onChange={(event) => {
-                          const next = [...actionForm.calls];
-                          next[index] = { ...next[index], domain: event.target.value };
-                          setActionForm({ ...actionForm, calls: next });
-                        }}
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <label className="text-xs uppercase text-slate-400">Service (직접 입력)</label>
-                      <Input
-                        placeholder="service"
-                        value={call.service}
-                        onChange={(event) => {
-                          const next = [...actionForm.calls];
-                          next[index] = { ...next[index], service: event.target.value };
-                          setActionForm({ ...actionForm, calls: next });
-                        }}
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <label className="text-xs uppercase text-slate-400">
-                        Entity ID(s) 직접 입력
-                      </label>
-                      <Input
-                        placeholder="entity_id, entity_id"
-                        value={call.entityIds.join(", ")}
-                        onChange={(event) => {
-                          const next = [...actionForm.calls];
-                          const parsed = event.target.value
-                            .split(",")
-                            .map((item) => item.trim())
-                            .filter(Boolean);
-                          next[index] = { ...next[index], entityIds: parsed };
-                          setActionForm({ ...actionForm, calls: next });
-                        }}
-                      />
-                    </div>
-                  </div>
-                </details>
 
                 <div className="mt-4 space-y-2">
                   <label className="text-xs uppercase text-slate-400">
