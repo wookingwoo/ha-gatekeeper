@@ -32,7 +32,14 @@ export default function App() {
     description: "",
     status: "active" as const,
     roleIds: "",
-    haCalls: ""
+    calls: [
+      {
+        domain: "",
+        service: "",
+        entityIds: "",
+        data: ""
+      }
+    ]
   });
   const [clientForm, setClientForm] = useState({
     name: "",
@@ -95,7 +102,14 @@ export default function App() {
   const createActionMutation = useMutation({
     mutationFn: api.createAction,
     onSuccess: () => {
-      setActionForm({ id: "", name: "", description: "", status: "active", roleIds: "", haCalls: "" });
+      setActionForm({
+        id: "",
+        name: "",
+        description: "",
+        status: "active",
+        roleIds: "",
+        calls: [{ domain: "", service: "", entityIds: "", data: "" }]
+      });
       queryClient.invalidateQueries({ queryKey: ["actions"] });
     }
   });
@@ -249,16 +263,102 @@ export default function App() {
                     onChange={(event) => setActionForm({ ...actionForm, roleIds: event.target.value })}
                   />
                 </div>
-                <Textarea
-                  placeholder='haCalls JSON e.g. [{"domain":"light","service":"turn_off","entityIds":["light.kitchen"]}]'
-                  value={actionForm.haCalls}
-                  onChange={(event) => setActionForm({ ...actionForm, haCalls: event.target.value })}
-                />
+                <div className="space-y-4">
+                  {actionForm.calls.map((call, index) => (
+                    <div key={`call-${index}`} className="rounded-lg border border-slate-800 bg-slate-950/40 p-4">
+                      <div className="grid gap-3 md:grid-cols-3">
+                        <Input
+                          placeholder="domain (e.g. light)"
+                          value={call.domain}
+                          onChange={(event) => {
+                            const next = [...actionForm.calls];
+                            next[index] = { ...next[index], domain: event.target.value };
+                            setActionForm({ ...actionForm, calls: next });
+                          }}
+                        />
+                        <Input
+                          placeholder="service (e.g. turn_off)"
+                          value={call.service}
+                          onChange={(event) => {
+                            const next = [...actionForm.calls];
+                            next[index] = { ...next[index], service: event.target.value };
+                            setActionForm({ ...actionForm, calls: next });
+                          }}
+                        />
+                        <Input
+                          placeholder="entity_id(s) comma separated"
+                          value={call.entityIds}
+                          onChange={(event) => {
+                            const next = [...actionForm.calls];
+                            next[index] = { ...next[index], entityIds: event.target.value };
+                            setActionForm({ ...actionForm, calls: next });
+                          }}
+                        />
+                      </div>
+                      <div className="mt-3 space-y-2">
+                        <p className="text-xs text-slate-500">
+                          HA service data JSON (optional). Example: {"{ \"brightness\": 120 }"}
+                        </p>
+                        <Textarea
+                          placeholder='{"brightness":120}'
+                          value={call.data}
+                          onChange={(event) => {
+                            const next = [...actionForm.calls];
+                            next[index] = { ...next[index], data: event.target.value };
+                            setActionForm({ ...actionForm, calls: next });
+                          }}
+                        />
+                        {actionForm.calls.length > 1 ? (
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            onClick={() => {
+                              const next = actionForm.calls.filter((_, i) => i !== index);
+                              setActionForm({ ...actionForm, calls: next });
+                            }}
+                          >
+                            Remove call
+                          </Button>
+                        ) : null}
+                      </div>
+                    </div>
+                  ))}
+                  <Button
+                    size="sm"
+                    variant="secondary"
+                    onClick={() =>
+                      setActionForm({
+                        ...actionForm,
+                        calls: [
+                          ...actionForm.calls,
+                          { domain: "", service: "", entityIds: "", data: "" }
+                        ]
+                      })
+                    }
+                  >
+                    Add HA call
+                  </Button>
+                </div>
                 <div className="flex items-center gap-3">
                   <Button
                     onClick={() => {
                       try {
-                        const parsed = JSON.parse(actionForm.haCalls || "[]");
+                        const parsed = actionForm.calls.map((call) => {
+                          if (!call.domain || !call.service) {
+                            throw new Error("domain_service_required");
+                          }
+                          const entityIds = call.entityIds
+                            .split(",")
+                            .map((item) => item.trim())
+                            .filter(Boolean);
+                          const data = call.data.trim() ? JSON.parse(call.data) : undefined;
+                          return {
+                            domain: call.domain.trim(),
+                            service: call.service.trim(),
+                            entityIds: entityIds.length > 0 ? entityIds : undefined,
+                            data
+                          };
+                        });
                         createActionMutation.mutate({
                           id: actionForm.id,
                           name: actionForm.name,
@@ -271,7 +371,7 @@ export default function App() {
                           haCalls: parsed
                         });
                       } catch {
-                        alert("haCalls must be valid JSON array");
+                        alert("Each call requires domain/service and valid JSON for data");
                       }
                     }}
                     disabled={!actionForm.id || !actionForm.name || !actionForm.roleIds}
