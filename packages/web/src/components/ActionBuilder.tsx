@@ -50,7 +50,10 @@ export function ActionBuilder({
         <div className="mt-4 grid gap-4 md:grid-cols-2">
           <div className="space-y-2">
             <label className="text-xs uppercase text-slate-400" htmlFor="action-id">
-              Action ID <span className="text-rose-300">필수</span>
+              Action ID
+              <span className="ml-2 inline-flex items-center rounded-full border border-rose-400/40 bg-rose-500/10 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-rose-200">
+                필수
+              </span>
             </label>
             <Input
               id="action-id"
@@ -64,7 +67,10 @@ export function ActionBuilder({
           </div>
           <div className="space-y-2">
             <label className="text-xs uppercase text-slate-400" htmlFor="action-name">
-              Action Name <span className="text-rose-300">필수</span>
+              Action Name
+              <span className="ml-2 inline-flex items-center rounded-full border border-rose-400/40 bg-rose-500/10 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-rose-200">
+                필수
+              </span>
             </label>
             <Input
               id="action-name"
@@ -114,7 +120,12 @@ export function ActionBuilder({
       <div className="rounded-xl border border-slate-800 bg-slate-950/50 p-5">
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div>
-            <p className="text-lg font-semibold text-slate-100">권한 설정</p>
+            <p className="text-lg font-semibold text-slate-100">
+              권한 설정
+              <span className="ml-2 inline-flex items-center rounded-full border border-rose-400/40 bg-rose-500/10 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-rose-200">
+                필수
+              </span>
+            </p>
             <p className="text-xs text-slate-500">액션을 호출할 수 있는 역할을 선택하세요.</p>
           </div>
           <div className="flex flex-wrap gap-2">
