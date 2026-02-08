@@ -1,6 +1,7 @@
 import type { Dispatch, SetStateAction } from "react";
 import { HaEntity, Role } from "../api";
 import { ActionFormState } from "../types";
+import { SearchableMultiSelect } from "./SearchableMultiSelect";
 import { SearchableSelect } from "./SearchableSelect";
 import { Button } from "./ui/button";
 import { Input } from "./ui/input";
@@ -30,9 +31,6 @@ export function ActionBuilder({
 
   const selectBase =
     "h-10 w-full rounded-md border border-slate-700 bg-slate-900 px-3 text-sm text-slate-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400 disabled:cursor-not-allowed disabled:opacity-60";
-  const multiSelectBase =
-    "h-28 w-full rounded-md border border-slate-700 bg-slate-900 px-3 py-2 text-xs text-slate-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400 disabled:cursor-not-allowed disabled:opacity-60";
-
   return (
     <div className="space-y-6">
       <div className="rounded-xl border border-slate-800 bg-slate-950/50 p-5">
@@ -276,31 +274,23 @@ export function ActionBuilder({
                   </div>
                   <div className="space-y-2">
                     <label className="text-xs uppercase text-slate-400">Entities (선택)</label>
-                    <select
-                      multiple
-                      className={multiSelectBase}
-                      value={call.entityIds}
-                      onChange={(event) => {
-                        const selected = Array.from(event.target.selectedOptions).map(
-                          (option) => option.value
-                        );
+                    <SearchableMultiSelect
+                      values={call.entityIds}
+                      onValuesChange={(values) => {
                         const next = [...actionForm.calls];
-                        next[index] = { ...next[index], entityIds: selected };
+                        next[index] = { ...next[index], entityIds: values };
                         setActionForm({ ...actionForm, calls: next });
                       }}
+                      options={entitiesForDomain.map((entity) => ({
+                        value: entity.entityId,
+                        label: entity.name || entity.entityId,
+                        description: entity.entityId
+                      }))}
+                      placeholder={call.domain ? "엔티티 선택" : "도메인 먼저 선택"}
+                      searchPlaceholder="엔티티 검색..."
+                      emptyText={call.domain ? "엔티티 없음" : "도메인 먼저 선택"}
                       disabled={!call.domain}
-                    >
-                      {entitiesForDomain.length === 0 ? (
-                        <option value="" disabled>
-                          {call.domain ? "엔티티 없음" : "도메인 먼저 선택"}
-                        </option>
-                      ) : null}
-                      {entitiesForDomain.map((entity) => (
-                        <option key={entity.entityId} value={entity.entityId}>
-                          {entity.name} ({entity.entityId})
-                        </option>
-                      ))}
-                    </select>
+                    />
                     <p className="text-xs text-slate-500">
                       엔티티가 필요 없는 서비스라면 비워둬도 됩니다.
                     </p>
