@@ -186,11 +186,11 @@ export default function App() {
         <header className="flex flex-wrap items-center justify-between gap-4">
           <div>
             <h1 className="text-3xl font-semibold text-slate-50">ha-gatekeeper</h1>
-            <p className="text-sm text-slate-400">Home Assistant 액션 게이트웨이 관리</p>
+            <p className="text-sm text-slate-400">Manage Home Assistant Action Gateway</p>
           </div>
           <div className="flex items-center gap-3">
             <Button variant="secondary" onClick={() => logoutMutation.mutate()}>
-              로그아웃
+              Log out
             </Button>
           </div>
         </header>
@@ -210,9 +210,9 @@ export default function App() {
         {tab === "Overview" && (
           <Card className="glass">
             <CardHeader>
-              <CardTitle>운영 개요</CardTitle>
+              <CardTitle>Operations Overview</CardTitle>
               <p className="text-sm text-slate-400">
-                활성 역할, 액션, 클라이언트 상태를 한눈에 확인합니다.
+                See active roles, actions, and client status at a glance.
               </p>
             </CardHeader>
             <CardContent className="grid gap-4 md:grid-cols-3">
@@ -225,7 +225,7 @@ export default function App() {
 
         {tab === "Roles" && (
           <div className="space-y-6">
-            <SectionHeader title="Roles" subtitle="액션 접근을 제어하는 역할을 정의합니다." />
+            <SectionHeader title="Roles" subtitle="Define roles that control access to actions." />
             <Card className="glass">
               <CardContent className="space-y-4">
                 <div className="flex flex-wrap gap-2">
@@ -238,7 +238,7 @@ export default function App() {
                     onClick={() => roleName && createRoleMutation.mutate(roleName)}
                     disabled={!roleName}
                   >
-                    역할 생성
+                    Create role
                   </Button>
                 </div>
                 <RoleTable roles={roleOptions} />
@@ -251,7 +251,7 @@ export default function App() {
           <div className="space-y-6">
             <SectionHeader
               title="Actions"
-              subtitle="화이트리스트 기반으로 Home Assistant 서비스 호출을 구성합니다."
+              subtitle="Configure Home Assistant service calls with an allowlist."
             />
             <Card className="glass">
               <CardContent>
@@ -300,7 +300,7 @@ export default function App() {
           <div className="space-y-6">
             <SectionHeader
               title="Clients"
-              subtitle="API Key 기반 클라이언트를 생성하고 키를 회전합니다."
+              subtitle="Create API key clients and rotate keys."
             />
             <Card className="glass">
               <CardContent className="space-y-4">
@@ -332,12 +332,12 @@ export default function App() {
                     }
                     disabled={!clientForm.name || !clientForm.roleId}
                   >
-                    클라이언트 생성
+                    Create client
                   </Button>
                 </div>
                 {issuedKey ? (
                   <div className="rounded-lg border border-emerald-400/40 bg-emerald-500/10 p-4 text-sm text-emerald-200">
-                    신규 API Key: <span className="font-mono">{issuedKey}</span>
+                    New API key: <span className="font-mono">{issuedKey}</span>
                   </div>
                 ) : null}
               </CardContent>
@@ -354,7 +354,7 @@ export default function App() {
           <div className="space-y-6">
             <SectionHeader
               title="Audit Logs"
-              subtitle="모든 액션 요청을 시간순으로 추적합니다."
+              subtitle="Track all action requests in chronological order."
             />
             <AuditTable logs={auditQuery.data?.logs ?? []} />
           </div>
@@ -363,4 +363,3 @@ export default function App() {
     </div>
   );
 }
-

@@ -31,44 +31,44 @@ export function ActionBuilder({
       <div className="rounded-xl border border-slate-800 bg-slate-950/50 p-5">
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div>
-            <p className="text-lg font-semibold text-slate-100">기본 정보</p>
+            <p className="text-lg font-semibold text-slate-100">Basic information</p>
             <p className="text-xs text-slate-500">
-              액션 식별자와 이름은 API 호출에 사용됩니다.
+              The action ID and name are used in API calls.
             </p>
           </div>
         </div>
         <div className="mt-4 grid gap-4 md:grid-cols-2">
           <div className="space-y-2">
-            <label className="text-xs uppercase text-slate-400" htmlFor="action-id">
+              <label className="text-xs uppercase text-slate-400" htmlFor="action-id">
               Action ID
               <span className="ml-2 inline-flex items-center rounded-full border border-rose-400/40 bg-rose-500/10 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-rose-200">
-                필수
+                Required
               </span>
             </label>
             <Input
               id="action-id"
-              placeholder="예: living_room_lights_on"
+              placeholder="e.g., living_room_lights_on"
               value={actionForm.id}
               onChange={(event) => setActionForm({ ...actionForm, id: event.target.value })}
             />
             <p className="text-xs text-slate-500">
-              <span className="font-mono">/v1/actions/{"{id}"}</span> 경로에 사용됩니다.
+              Used in the <span className="font-mono">/v1/actions/{"{id}"}</span> path.
             </p>
           </div>
           <div className="space-y-2">
             <label className="text-xs uppercase text-slate-400" htmlFor="action-name">
               Action Name
               <span className="ml-2 inline-flex items-center rounded-full border border-rose-400/40 bg-rose-500/10 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-rose-200">
-                필수
+                Required
               </span>
             </label>
             <Input
               id="action-name"
-              placeholder="예: 거실 조명 켜기"
+              placeholder="e.g., Turn on living room lights"
               value={actionForm.name}
               onChange={(event) => setActionForm({ ...actionForm, name: event.target.value })}
             />
-            <p className="text-xs text-slate-500">운영자가 이해할 수 있는 이름을 입력하세요.</p>
+            <p className="text-xs text-slate-500">Enter a name that operators will recognize.</p>
           </div>
           <div className="space-y-2">
             <label className="text-xs uppercase text-slate-400" htmlFor="action-desc">
@@ -77,7 +77,7 @@ export function ActionBuilder({
             <Textarea
               id="action-desc"
               className="min-h-[84px]"
-              placeholder="예: 저녁 모드에서 거실 조명을 켭니다."
+              placeholder="e.g., Turn on living room lights in evening mode."
               value={actionForm.description}
               onChange={(event) => setActionForm({ ...actionForm, description: event.target.value })}
             />
@@ -101,7 +101,7 @@ export function ActionBuilder({
               <option value="disabled">disabled</option>
             </select>
             <p className="text-xs text-slate-500">
-              disabled는 생성 후 즉시 호출이 차단됩니다.
+              disabled blocks calls immediately after creation.
             </p>
           </div>
         </div>
@@ -111,12 +111,12 @@ export function ActionBuilder({
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div>
             <p className="text-lg font-semibold text-slate-100">
-              권한 설정
+              Permissions
               <span className="ml-2 inline-flex items-center rounded-full border border-rose-400/40 bg-rose-500/10 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-rose-200">
-                필수
+                Required
               </span>
             </p>
-            <p className="text-xs text-slate-500">액션을 호출할 수 있는 역할을 선택하세요.</p>
+            <p className="text-xs text-slate-500">Select roles that can call this action.</p>
           </div>
           <div className="flex flex-wrap gap-2">
             <Button
@@ -130,7 +130,7 @@ export function ActionBuilder({
               }
               disabled={roleOptions.length === 0}
             >
-              모두 선택
+              Select all
             </Button>
             <Button
               size="sm"
@@ -138,13 +138,13 @@ export function ActionBuilder({
               onClick={() => setActionForm({ ...actionForm, roleIds: [] })}
               disabled={actionForm.roleIds.length === 0}
             >
-              선택 해제
+              Clear selection
             </Button>
           </div>
         </div>
         {roleOptions.length === 0 ? (
           <p className="mt-3 text-sm text-slate-400">
-            역할이 없습니다. 먼저 Roles 탭에서 역할을 생성하세요.
+            No roles yet. Create a role in the Roles tab first.
           </p>
         ) : (
           <div className="mt-4 grid gap-2 text-sm text-slate-200 md:grid-cols-2">
@@ -184,9 +184,9 @@ export function ActionBuilder({
       <div className="rounded-xl border border-slate-800 bg-slate-950/50 p-5">
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div>
-            <p className="text-lg font-semibold text-slate-100">Home Assistant 호출</p>
+            <p className="text-lg font-semibold text-slate-100">Home Assistant calls</p>
             <p className="text-xs text-slate-500">
-              하나의 액션에 여러 HA 서비스를 순차적으로 실행할 수 있습니다.
+              You can run multiple HA services sequentially in one action.
             </p>
           </div>
           <Button
@@ -199,7 +199,7 @@ export function ActionBuilder({
               })
             }
           >
-            + 호출 추가
+            + Add call
           </Button>
         </div>
         <div className="mt-4 space-y-4">
@@ -208,7 +208,7 @@ export function ActionBuilder({
             const entitiesForDomain = call.domain ? entityMap.get(call.domain.trim()) ?? [] : [];
             const summaryParts = [];
             if (call.domain && call.service) summaryParts.push(`${call.domain}.${call.service}`);
-            if (call.entityIds.length > 0) summaryParts.push(`엔티티 ${call.entityIds.length}`);
+            if (call.entityIds.length > 0) summaryParts.push(`Entities ${call.entityIds.length}`);
 
             return (
               <div
@@ -220,8 +220,8 @@ export function ActionBuilder({
                     <p className="text-sm font-semibold text-slate-100">Call {index + 1}</p>
                     <p className="text-xs text-slate-500">
                       {summaryParts.length > 0
-                        ? `요약: ${summaryParts.join(" · ")}`
-                        : "도메인과 서비스를 선택하세요."}
+                        ? `Summary: ${summaryParts.join(" / ")}`
+                        : "Select a domain and service."}
                     </p>
                   </div>
                   {actionForm.calls.length > 1 ? (
@@ -233,7 +233,7 @@ export function ActionBuilder({
                         setActionForm({ ...actionForm, calls: next });
                       }}
                     >
-                      호출 삭제
+                      Remove call
                     </Button>
                   ) : null}
                 </div>
@@ -248,9 +248,9 @@ export function ActionBuilder({
                         setActionForm({ ...actionForm, calls: next });
                       }}
                       options={[...serviceMap.keys()]}
-                      placeholder="도메인 선택"
-                      searchPlaceholder="도메인 검색..."
-                      emptyText="도메인을 찾을 수 없습니다"
+                      placeholder="Select domain"
+                      searchPlaceholder="Search domains..."
+                      emptyText="No domains found"
                     />
                   </div>
                   <div className="space-y-2">
@@ -263,17 +263,17 @@ export function ActionBuilder({
                         setActionForm({ ...actionForm, calls: next });
                       }}
                       options={servicesForDomain}
-                      placeholder="서비스 선택"
-                      searchPlaceholder="서비스 검색..."
-                      emptyText="서비스를 찾을 수 없습니다"
+                      placeholder="Select service"
+                      searchPlaceholder="Search services..."
+                      emptyText="No services found"
                       disabled={!call.domain}
                     />
                     <p className="text-xs text-slate-500">
-                      도메인 선택 후 가능한 서비스가 표시됩니다.
+                      Available services appear after selecting a domain.
                     </p>
                   </div>
                   <div className="space-y-2">
-                    <label className="text-xs uppercase text-slate-400">Entities (선택)</label>
+                    <label className="text-xs uppercase text-slate-400">Entities (optional)</label>
                     <SearchableMultiSelect
                       values={call.entityIds}
                       onValuesChange={(values) => {
@@ -286,23 +286,23 @@ export function ActionBuilder({
                         label: entity.name || entity.entityId,
                         description: entity.entityId
                       }))}
-                      placeholder={call.domain ? "엔티티 선택" : "도메인 먼저 선택"}
-                      searchPlaceholder="엔티티 검색..."
-                      emptyText={call.domain ? "엔티티 없음" : "도메인 먼저 선택"}
+                      placeholder={call.domain ? "Select entities" : "Select a domain first"}
+                      searchPlaceholder="Search entities..."
+                      emptyText={call.domain ? "No entities" : "Select a domain first"}
                       disabled={!call.domain}
                     />
                     <p className="text-xs text-slate-500">
-                      엔티티가 필요 없는 서비스라면 비워둬도 됩니다.
+                      Leave empty if the service does not require entities.
                     </p>
                   </div>
                 </div>
 
                 <div className="mt-4 space-y-2">
                   <label className="text-xs uppercase text-slate-400">
-                    서비스 데이터 JSON (선택)
+                    Service data JSON (optional)
                   </label>
                   <p className="text-xs text-slate-500">
-                    HA 서비스 데이터. 예: {"{ \"brightness\": 120 }"}
+                    HA service data. e.g., {"{ \"brightness\": 120 }"}
                   </p>
                   <Textarea
                     placeholder='{"brightness":120}'
@@ -322,13 +322,13 @@ export function ActionBuilder({
 
       <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-slate-800 bg-slate-950/50 p-4">
         <div>
-          <p className="text-sm font-medium text-slate-100">액션 생성 준비</p>
+          <p className="text-sm font-medium text-slate-100">Ready to create action</p>
           <p className="text-xs text-slate-500">
-            ID, Name, Role을 입력하면 생성 버튼이 활성화됩니다.
+            The Create button activates after ID, Name, and Role are set.
           </p>
         </div>
         <Button onClick={onCreate} disabled={isDisabled}>
-          액션 생성
+          Create action
         </Button>
       </div>
     </div>

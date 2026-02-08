@@ -131,7 +131,7 @@ export function SearchableMultiSelect({
               onClick={() => onValuesChange([])}
               disabled={values.length === 0}
             >
-              선택 해제
+              Clear selection
             </button>
           </div>
           <div className="max-h-64 overflow-auto p-1 text-sm">

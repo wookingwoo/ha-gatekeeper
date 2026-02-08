@@ -19,7 +19,7 @@ export function LoginCard({
     <Card className="glass">
       <CardHeader>
         <CardTitle className="text-2xl">ha-gatekeeper admin</CardTitle>
-        <p className="text-sm text-slate-400">세션 기반 관리 콘솔 로그인</p>
+        <p className="text-sm text-slate-400">Session-based admin console login</p>
       </CardHeader>
       <CardContent className="space-y-4">
         <Input
@@ -29,9 +29,11 @@ export function LoginCard({
           onChange={(event) => onPasswordChange(event.target.value)}
         />
         <Button className="w-full" onClick={onSubmit} disabled={isSubmitting}>
-          로그인
+          Log in
         </Button>
-        {hasError ? <p className="text-sm text-rose-300">로그인 실패. 비밀번호를 확인하세요.</p> : null}
+        {hasError ? (
+          <p className="text-sm text-rose-300">Login failed. Check your password.</p>
+        ) : null}
       </CardContent>
     </Card>
   );
