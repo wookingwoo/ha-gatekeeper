@@ -40,10 +40,11 @@ type ApiResponse<T> = {
 } & T;
 
 async function apiFetch<T>(path: string, options?: RequestInit): Promise<ApiResponse<T>> {
+  const hasBody = options?.body !== undefined;
   const res = await fetch(path, {
     credentials: "include",
     headers: {
-      "Content-Type": "application/json",
+      ...(hasBody ? { "Content-Type": "application/json" } : {}),
       ...(options?.headers ?? {})
     },
     ...options
