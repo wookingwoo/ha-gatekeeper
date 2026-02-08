@@ -509,11 +509,18 @@ export default function App() {
                     value={clientForm.name}
                     onChange={(event) => setClientForm({ ...clientForm, name: event.target.value })}
                   />
-                  <Input
-                    placeholder="role id"
+                  <select
+                    className="h-10 w-full rounded-md border border-slate-700 bg-slate-900 px-3 text-sm text-slate-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400"
                     value={clientForm.roleId}
                     onChange={(event) => setClientForm({ ...clientForm, roleId: event.target.value })}
-                  />
+                  >
+                    <option value="">Select role</option>
+                    {roleOptions.map((role) => (
+                      <option key={role.id} value={role.id}>
+                        {role.name} ({role.id})
+                      </option>
+                    ))}
+                  </select>
                   <Button
                     onClick={() =>
                       createClientMutation.mutate({
