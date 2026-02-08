@@ -1,6 +1,7 @@
 import type { Dispatch, SetStateAction } from "react";
 import { HaEntity, Role } from "../api";
 import { ActionFormState } from "../types";
+import { SearchableSelect } from "./SearchableSelect";
 import { Button } from "./ui/button";
 import { Input } from "./ui/input";
 import { Textarea } from "./ui/textarea";
@@ -240,43 +241,35 @@ export function ActionBuilder({
                 <div className="mt-4 grid gap-4 md:grid-cols-3">
                   <div className="space-y-2">
                     <label className="text-xs uppercase text-slate-400">Domain</label>
-                    <select
-                      className={selectBase}
+                    <SearchableSelect
                       value={call.domain}
-                      onChange={(event) => {
+                      onValueChange={(value) => {
                         const next = [...actionForm.calls];
-                        next[index] = { ...next[index], domain: event.target.value, service: "" };
+                        next[index] = { ...next[index], domain: value, service: "" };
                         setActionForm({ ...actionForm, calls: next });
                       }}
-                    >
-                      <option value="">도메인 선택</option>
-                      {[...serviceMap.keys()].map((domain) => (
-                        <option key={domain} value={domain}>
-                          {domain}
-                        </option>
-                      ))}
-                    </select>
+                      options={[...serviceMap.keys()]}
+                      placeholder="도메인 선택"
+                      searchPlaceholder="도메인 검색..."
+                      emptyText="도메인을 찾을 수 없습니다"
+                    />
                     <p className="text-xs text-slate-500">목록에 없으면 Advanced에서 직접 입력.</p>
                   </div>
                   <div className="space-y-2">
                     <label className="text-xs uppercase text-slate-400">Service</label>
-                    <select
-                      className={selectBase}
+                    <SearchableSelect
                       value={call.service}
-                      onChange={(event) => {
+                      onValueChange={(value) => {
                         const next = [...actionForm.calls];
-                        next[index] = { ...next[index], service: event.target.value };
+                        next[index] = { ...next[index], service: value };
                         setActionForm({ ...actionForm, calls: next });
                       }}
+                      options={servicesForDomain}
+                      placeholder="서비스 선택"
+                      searchPlaceholder="서비스 검색..."
+                      emptyText="서비스를 찾을 수 없습니다"
                       disabled={!call.domain}
-                    >
-                      <option value="">서비스 선택</option>
-                      {servicesForDomain.map((service) => (
-                        <option key={service} value={service}>
-                          {service}
-                        </option>
-                      ))}
-                    </select>
+                    />
                     <p className="text-xs text-slate-500">
                       도메인 선택 후 가능한 서비스가 표시됩니다.
                     </p>
