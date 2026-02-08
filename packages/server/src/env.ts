@@ -13,7 +13,7 @@ const envSchema = z.object({
   HA_BASE_URL: z.string().url(),
   HA_TOKEN: z.string().min(1),
   ADMIN_PASSWORD: z.string().min(8),
-  ADMIN_SESSION_SECRET: z.string().min(32),
+  ADMIN_SESSION_SECRET: z.string().min(8),
   API_KEY_HASH_SECRET: z.string().min(16),
   CORS_ORIGIN: z.string().default("http://localhost:5173")
 });

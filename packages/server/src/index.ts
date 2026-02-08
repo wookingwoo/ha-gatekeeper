@@ -5,6 +5,7 @@ import secureSession from "@fastify/secure-session";
 import staticPlugin from "@fastify/static";
 import path from "node:path";
 import fs from "node:fs";
+import crypto from "node:crypto";
 import { fileURLToPath } from "node:url";
 import { env, isProd } from "./env.js";
 import { prisma } from "./db.js";
@@ -36,11 +37,12 @@ await app.register(cors, {
 await app.register(cookie);
 
 let sessionKey = Buffer.from(env.ADMIN_SESSION_SECRET, "base64");
-if (sessionKey.length < 32) {
+if (sessionKey.length !== 32) {
   sessionKey = Buffer.from(env.ADMIN_SESSION_SECRET, "utf8");
 }
-if (sessionKey.length < 32) {
-  throw new Error("ADMIN_SESSION_SECRET must be at least 32 bytes (prefer base64)");
+if (sessionKey.length !== 32) {
+  sessionKey = crypto.createHash("sha256").update(env.ADMIN_SESSION_SECRET).digest();
+  app.log.warn("ADMIN_SESSION_SECRET was not 32 bytes; derived key via sha256");
 }
 
 await app.register(secureSession, {
