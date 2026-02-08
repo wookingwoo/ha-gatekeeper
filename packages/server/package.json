@@ -15,6 +15,7 @@
     "@fastify/secure-session": "^8.3.0",
     "@fastify/static": "^7.0.4",
     "@prisma/client": "^5.20.0",
+    "dotenv": "^16.4.5",
     "fastify": "^4.28.1",
     "undici": "^6.18.2",
     "zod": "^3.23.8"
