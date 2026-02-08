@@ -1,5 +1,6 @@
 generator client {
   provider = "prisma-client-js"
+  output   = "../../../node_modules/.prisma/client"
 }
 
 datasource db {
@@ -7,20 +8,10 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-enum ClientStatus {
-  active
-  disabled
-}
-
-enum ActionStatus {
-  active
-  disabled
-}
-
 model Client {
   id           String       @id @default(cuid())
   name         String
-  status       ClientStatus @default(active)
+  status       String       @default("active")
   roleId       String
   role         Role         @relation(fields: [roleId], references: [id])
   apiKeyHash   String
@@ -41,8 +32,8 @@ model Action {
   id          String       @id
   name        String
   description String?
-  haCalls     Json
-  status      ActionStatus @default(active)
+  haCalls     String
+  status      String       @default("active")
   roleActions RoleAction[]
   auditLogs   AuditLog[]
   createdAt   DateTime     @default(now())

@@ -203,7 +203,7 @@ app.post("/v1/actions/:actionId", async (request, reply) => {
   }
 
   try {
-    const haCalls = haCallsSchema.parse(action.haCalls);
+    const haCalls = haCallsSchema.parse(JSON.parse(action.haCalls));
     const results = await callHaServices(haCalls);
 
     await logAudit({
@@ -295,13 +295,13 @@ app.get("/admin/actions", async (request, reply) => {
     include: { roleActions: true },
     orderBy: { createdAt: "desc" }
   });
-  const payload = actions.map((action) => ({
+  const payload = actions.map((action: any) => ({
     id: action.id,
     name: action.name,
     description: action.description,
-    status: action.status,
-    haCalls: action.haCalls,
-    roleIds: action.roleActions.map((ra) => ra.roleId)
+    status: action.status as "active" | "disabled",
+    haCalls: JSON.parse(action.haCalls),
+    roleIds: action.roleActions.map((ra: any) => ra.roleId)
   }));
   return reply.send({ ok: true, actions: payload });
 });
@@ -320,7 +320,7 @@ app.post("/admin/actions", async (request, reply) => {
       id: parsed.data.id,
       name: parsed.data.name,
       description: parsed.data.description,
-      haCalls: parsed.data.haCalls,
+      haCalls: JSON.stringify(parsed.data.haCalls),
       status: parsed.data.status,
       roleActions: {
         create: parsed.data.roleIds.map((roleId) => ({ roleId }))
@@ -347,7 +347,7 @@ app.patch("/admin/actions/:id", async (request, reply) => {
     data: {
       name: parsed.data.name,
       description: parsed.data.description,
-      haCalls: parsed.data.haCalls,
+      haCalls: parsed.data.haCalls ? JSON.stringify(parsed.data.haCalls) : undefined,
       status: parsed.data.status,
       roleActions: parsed.data.roleIds
         ? {
@@ -370,7 +370,7 @@ app.get("/admin/clients", async (request, reply) => {
     orderBy: { createdAt: "desc" }
   });
 
-  const payload = clients.map((client) => ({
+  const payload = clients.map((client: any) => ({
     id: client.id,
     name: client.name,
     status: client.status,
@@ -464,7 +464,7 @@ app.get("/admin/audit-logs", async (request, reply) => {
     skip: parsed.data.offset
   });
 
-  const payload = logs.map((log) => ({
+  const payload = logs.map((log: any) => ({
     id: log.id,
     timestamp: log.timestamp,
     success: log.success,
