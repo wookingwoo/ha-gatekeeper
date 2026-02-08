@@ -97,12 +97,12 @@ docker run -p 8080:8080 \
 
 ## Contributing
 
-Please read `CONTRIBUTING.md` for setup, workflow, and PR guidelines. By participating, you agree to the `CODE_OF_CONDUCT.md`.
+Please read [CONTRIBUTING.md](CONTRIBUTING.md) for setup, workflow, and PR guidelines. By participating, you agree to the [CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md).
 
 ## Security
 
-See `SECURITY.md` for reporting vulnerabilities.
+See [SECURITY.md](SECURITY.md) for reporting vulnerabilities.
 
 ## License
 
-Licensed under the MIT License. See `LICENSE`.
+Licensed under the MIT License. See [LICENSE](LICENSE).
