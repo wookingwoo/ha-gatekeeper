@@ -1,24 +1,24 @@
 # ha-gatekeeper
 
-Home Assistant Long-Lived Access Token을 외부에 노출하지 않고, 제한된 Action만 실행하는 단일 서버형 API Gateway.
+A single-container API gateway for Home Assistant that allows limited, audited actions without exposing a long-lived access token.
 
-## 핵심 기능
+## Key Features
 
-- API Key 기반 Public Action 호출
-- Role 기반 권한 제어
-- Audit Log 저장/조회
-- Admin Dashboard (세션 로그인)
-- 단일 컨테이너 배포
+- API key based public action calls
+- Role-based access control (RBAC)
+- Audit log storage and query
+- Admin dashboard with session login
+- Single-container deployment
 
-## 로컬 개발
+## Local Development
+
+1. Install dependencies.
 
 ```bash
 npm install
 ```
 
-### 환경 변수
-
-`packages/server/.env`에 아래 값을 설정하세요.
+1. Configure environment variables for the server in `packages/server/.env`.
 
 ```bash
 PORT=8080
@@ -31,21 +31,27 @@ API_KEY_HASH_SECRET="change-this-secret"
 CORS_ORIGIN="http://localhost:5173"
 ```
 
-### DB 초기화
+1. Initialize the database.
 
 ```bash
 npm run prisma:generate
 npm run prisma:migrate
 ```
 
-### 개발 서버
+1. Start the dev servers.
 
 ```bash
 npm run dev
 ```
 
-- Admin UI: http://localhost:5173
-- API: http://localhost:8080
+Admin UI: http://localhost:5173
+API: http://localhost:8080
+
+### Environment Notes
+
+- `ADMIN_SESSION_SECRET` must be a base64 string of at least 32 bytes. Example: `openssl rand -base64 32`.
+- `API_KEY_HASH_SECRET` should be a strong, random secret.
+- `HA_TOKEN` is a Home Assistant long-lived access token. Keep it private.
 
 ## Docker
 
@@ -68,7 +74,7 @@ docker run -p 8080:8080 \
 `POST /v1/actions/:actionId`
 
 - Header: `X-API-Key`
-- 응답: 실행 요약만 반환 (HA 내부 구조 노출 없음)
+- Response: execution summary only (no internal Home Assistant data exposure)
 
 ## Admin API
 
@@ -82,3 +88,15 @@ docker run -p 8080:8080 \
 - `POST /admin/clients`
 - `POST /admin/clients/:id/rotate-key`
 - `GET /admin/audit-logs`
+
+## Contributing
+
+Please read `CONTRIBUTING.md` for setup, workflow, and PR guidelines. By participating, you agree to the `CODE_OF_CONDUCT.md`.
+
+## Security
+
+See `SECURITY.md` for reporting vulnerabilities.
+
+## License
+
+Licensed under the MIT License. See `LICENSE`.
