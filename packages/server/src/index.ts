@@ -9,7 +9,7 @@ import crypto from "node:crypto";
 import { fileURLToPath } from "node:url";
 import { env, isProd } from "./env.js";
 import { prisma } from "./db.js";
-import { callHaServices } from "./ha.js";
+import { callHaServices, fetchHaServices } from "./ha.js";
 import {
   auditQuerySchema,
   createActionSchema,
@@ -269,6 +269,9 @@ app.get("/admin/me", async (request) => ({
   authenticated: request.session.get("admin") === true
 }));
 
+let haServiceCache: { data: Awaited<ReturnType<typeof fetchHaServices>>; expiresAt: number } | null =
+  null;
+
 app.get("/admin/roles", async (request, reply) => {
   if (!requireAdmin(request)) {
     return reply.status(401).send({ ok: false, error: "unauthorized" });
@@ -287,6 +290,26 @@ app.post("/admin/roles", async (request, reply) => {
   }
   const role = await prisma.role.create({ data: { name: parsed.data.name } });
   return reply.send({ ok: true, role });
+});
+
+app.get("/admin/ha/services", async (request, reply) => {
+  if (!requireAdmin(request)) {
+    return reply.status(401).send({ ok: false, error: "unauthorized" });
+  }
+
+  const now = Date.now();
+  if (haServiceCache && haServiceCache.expiresAt > now) {
+    return reply.send({ ok: true, services: haServiceCache.data, cached: true });
+  }
+
+  try {
+    const services = await fetchHaServices();
+    haServiceCache = { data: services, expiresAt: now + 60_000 };
+    return reply.send({ ok: true, services, cached: false });
+  } catch (err) {
+    request.log.error({ err }, "ha_services_failed");
+    return reply.status(502).send({ ok: false, error: "ha_services_failed" });
+  }
 });
 
 app.get("/admin/actions", async (request, reply) => {

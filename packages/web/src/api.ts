@@ -35,6 +35,11 @@ export type AuditLog = {
   actionIdRaw: string;
 };
 
+export type HaServiceCatalog = {
+  domain: string;
+  services: string[];
+};
+
 type ApiResponse<T> = {
   ok: boolean;
 } & T;
@@ -98,5 +103,8 @@ export const api = {
     apiFetch<{ client: Client; apiKey: string }>(`/admin/clients/${clientId}/rotate-key`, {
       method: "POST"
     }),
-  auditLogs: () => apiFetch<{ logs: AuditLog[] }>("/admin/audit-logs")
+  auditLogs: () => apiFetch<{ logs: AuditLog[] }>("/admin/audit-logs"),
+  haServices: () => apiFetch<{ services: HaServiceCatalog[]; cached?: boolean }>(
+    "/admin/ha/services"
+  )
 };

@@ -1,6 +1,6 @@
 import { Fragment, useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { api, Action, Client, Role } from "./api";
+import { api, Action, Client, HaServiceCatalog, Role } from "./api";
 import { Badge } from "./components/ui/badge";
 import { Button } from "./components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "./components/ui/card";
@@ -80,6 +80,18 @@ export default function App() {
     enabled: authenticated,
     refetchInterval: 15000
   });
+
+  const servicesQuery = useQuery({
+    queryKey: ["ha-services"],
+    queryFn: api.haServices,
+    enabled: authenticated && tab === "Actions"
+  });
+  const haServices = servicesQuery.data?.services ?? [];
+  const serviceMap = useMemo(() => {
+    const map = new Map<string, string[]>();
+    haServices.forEach((entry) => map.set(entry.domain, entry.services));
+    return map;
+  }, [haServices]);
 
   const loginMutation = useMutation({
     mutationFn: (pwd: string) => api.login(pwd),
@@ -264,27 +276,69 @@ export default function App() {
                   />
                 </div>
                 <div className="space-y-4">
-                  {actionForm.calls.map((call, index) => (
+                  {actionForm.calls.map((call, index) => {
+                    const servicesForDomain = call.domain
+                      ? serviceMap.get(call.domain.trim()) ?? []
+                      : [];
+
+                    return (
                     <div key={`call-${index}`} className="rounded-lg border border-slate-800 bg-slate-950/40 p-4">
                       <div className="grid gap-3 md:grid-cols-3">
-                        <Input
-                          placeholder="domain (e.g. light)"
-                          value={call.domain}
-                          onChange={(event) => {
-                            const next = [...actionForm.calls];
-                            next[index] = { ...next[index], domain: event.target.value };
-                            setActionForm({ ...actionForm, calls: next });
-                          }}
-                        />
-                        <Input
-                          placeholder="service (e.g. turn_off)"
-                          value={call.service}
-                          onChange={(event) => {
-                            const next = [...actionForm.calls];
-                            next[index] = { ...next[index], service: event.target.value };
-                            setActionForm({ ...actionForm, calls: next });
-                          }}
-                        />
+                        <div className="space-y-2">
+                          <select
+                            className="h-10 w-full rounded-md border border-slate-700 bg-slate-900 px-3 text-sm text-slate-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400"
+                            value={call.domain}
+                            onChange={(event) => {
+                              const next = [...actionForm.calls];
+                              next[index] = { ...next[index], domain: event.target.value, service: "" };
+                              setActionForm({ ...actionForm, calls: next });
+                            }}
+                          >
+                            <option value="">Select domain</option>
+                            {haServices.map((entry) => (
+                              <option key={entry.domain} value={entry.domain}>
+                                {entry.domain}
+                              </option>
+                            ))}
+                          </select>
+                          <Input
+                            placeholder="domain (manual override)"
+                            value={call.domain}
+                            onChange={(event) => {
+                              const next = [...actionForm.calls];
+                              next[index] = { ...next[index], domain: event.target.value };
+                              setActionForm({ ...actionForm, calls: next });
+                            }}
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <select
+                            className="h-10 w-full rounded-md border border-slate-700 bg-slate-900 px-3 text-sm text-slate-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400"
+                            value={call.service}
+                            onChange={(event) => {
+                              const next = [...actionForm.calls];
+                              next[index] = { ...next[index], service: event.target.value };
+                              setActionForm({ ...actionForm, calls: next });
+                            }}
+                            disabled={!call.domain}
+                          >
+                            <option value="">Select service</option>
+                            {servicesForDomain.map((service) => (
+                              <option key={service} value={service}>
+                                {service}
+                              </option>
+                            ))}
+                          </select>
+                          <Input
+                            placeholder="service (manual override)"
+                            value={call.service}
+                            onChange={(event) => {
+                              const next = [...actionForm.calls];
+                              next[index] = { ...next[index], service: event.target.value };
+                              setActionForm({ ...actionForm, calls: next });
+                            }}
+                          />
+                        </div>
                         <Input
                           placeholder="entity_id(s) comma separated"
                           value={call.entityIds}
@@ -322,7 +376,8 @@ export default function App() {
                         ) : null}
                       </div>
                     </div>
-                  ))}
+                  );
+                  })}
                   <Button
                     size="sm"
                     variant="secondary"

@@ -11,6 +11,11 @@ export type HaCallResult = {
 
 const baseUrl = env.HA_BASE_URL.replace(/\/$/, "");
 
+export type HaServiceCatalog = {
+  domain: string;
+  services: string[];
+};
+
 export async function callHaServices(calls: HaCall[]): Promise<HaCallResult[]> {
   const results: HaCallResult[] = [];
 
@@ -51,4 +56,25 @@ export async function callHaServices(calls: HaCall[]): Promise<HaCallResult[]> {
   }
 
   return results;
+}
+
+export async function fetchHaServices(): Promise<HaServiceCatalog[]> {
+  const url = `${baseUrl}/api/services`;
+  const res = await fetch(url, {
+    method: "GET",
+    headers: {
+      Authorization: `Bearer ${env.HA_TOKEN}`,
+      "Content-Type": "application/json"
+    }
+  });
+
+  if (!res.ok) {
+    throw new Error(`ha_services_failed:${res.status}`);
+  }
+
+  const data = (await res.json()) as Array<{ domain: string; services: Record<string, unknown> }>;
+  return data.map((entry) => ({
+    domain: entry.domain,
+    services: Object.keys(entry.services ?? {})
+  }));
 }
