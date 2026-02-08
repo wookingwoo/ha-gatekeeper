@@ -395,6 +395,11 @@ app.post("/admin/clients", async (request, reply) => {
     return reply.status(400).send({ ok: false, error: "invalid_body" });
   }
 
+  const roleExists = await prisma.role.findUnique({ where: { id: parsed.data.roleId } });
+  if (!roleExists) {
+    return reply.status(400).send({ ok: false, error: "role_not_found" });
+  }
+
   const { apiKey, apiKeyHash, apiKeyPrefix } = generateApiKey();
 
   const client = await prisma.client.create({
