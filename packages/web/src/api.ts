@@ -109,6 +109,10 @@ export const api = {
     apiFetch<{ client: Client; apiKey: string }>(`/admin/clients/${clientId}/rotate-key`, {
       method: "POST"
     }),
+  deleteClient: (clientId: string) =>
+    apiFetch<{}>(`/admin/clients/${clientId}`, {
+      method: "DELETE"
+    }),
   auditLogs: () => apiFetch<{ logs: AuditLog[] }>("/admin/audit-logs"),
   haServices: () => apiFetch<{ services: HaServiceCatalog[]; cached?: boolean }>(
     "/admin/ha/services"

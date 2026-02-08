@@ -503,6 +503,29 @@ app.post("/admin/clients/:id/rotate-key", async (request, reply) => {
   return reply.send({ ok: true, client, apiKey });
 });
 
+app.delete("/admin/clients/:id", async (request, reply) => {
+  if (!requireAdmin(request)) {
+    return reply.status(401).send({ ok: false, error: "unauthorized" });
+  }
+
+  const clientId = (request.params as { id: string }).id;
+
+  try {
+    await prisma.$transaction([
+      prisma.auditLog.updateMany({
+        where: { clientId },
+        data: { clientId: null }
+      }),
+      prisma.client.delete({ where: { id: clientId } })
+    ]);
+  } catch (err) {
+    request.log.error({ err }, "client_delete_failed");
+    return reply.status(400).send({ ok: false, error: "client_delete_failed" });
+  }
+
+  return reply.send({ ok: true });
+});
+
 app.get("/admin/audit-logs", async (request, reply) => {
   if (!requireAdmin(request)) {
     return reply.status(401).send({ ok: false, error: "unauthorized" });

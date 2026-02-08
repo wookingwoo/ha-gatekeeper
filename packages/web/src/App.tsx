@@ -158,6 +158,13 @@ export default function App() {
     }
   });
 
+  const deleteClientMutation = useMutation({
+    mutationFn: api.deleteClient,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["clients"] });
+    }
+  });
+
   const roleOptions = useMemo(() => rolesQuery.data?.roles ?? [], [rolesQuery.data]);
 
   if (!authenticated) {
@@ -544,6 +551,7 @@ export default function App() {
             <ClientTable
               clients={clientsQuery.data?.clients ?? []}
               onRotate={(clientId) => rotateKeyMutation.mutate(clientId)}
+              onDelete={(clientId) => deleteClientMutation.mutate(clientId)}
             />
           </div>
         )}
@@ -672,10 +680,12 @@ function ActionTable({ actions }: { actions: Action[] }) {
 
 function ClientTable({
   clients,
-  onRotate
+  onRotate,
+  onDelete
 }: {
   clients: Client[];
   onRotate: (id: string) => void;
+  onDelete: (id: string) => void;
 }) {
   return (
     <Card className="glass">
@@ -688,6 +698,7 @@ function ClientTable({
               <TableHead>Status</TableHead>
               <TableHead>Key Prefix</TableHead>
               <TableHead>Rotate</TableHead>
+              <TableHead>Delete</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -706,6 +717,19 @@ function ClientTable({
                 <TableCell>
                   <Button size="sm" variant="secondary" onClick={() => onRotate(client.id)}>
                     Rotate
+                  </Button>
+                </TableCell>
+                <TableCell>
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    onClick={() => {
+                      if (confirm(`Delete client \"${client.name}\"? This cannot be undone.`)) {
+                        onDelete(client.id);
+                      }
+                    }}
+                  >
+                    Delete
                   </Button>
                 </TableCell>
               </TableRow>
