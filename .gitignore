@@ -1,0 +1,9 @@
+node_modules
+packages/server/node_modules
+packages/web/node_modules
+packages/server/dist
+packages/web/dist
+packages/server/prisma/dev.db
+packages/server/prisma/dev.db-journal
+.env
+.env.*

@@ -1,0 +1,71 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+enum ClientStatus {
+  active
+  disabled
+}
+
+enum ActionStatus {
+  active
+  disabled
+}
+
+model Client {
+  id           String       @id @default(cuid())
+  name         String
+  status       ClientStatus @default(active)
+  roleId       String
+  role         Role         @relation(fields: [roleId], references: [id])
+  apiKeyHash   String
+  apiKeyPrefix String
+  createdAt    DateTime     @default(now())
+  auditLogs    AuditLog[]
+}
+
+model Role {
+  id          String       @id @default(cuid())
+  name        String       @unique
+  clients     Client[]
+  roleActions RoleAction[]
+  createdAt   DateTime     @default(now())
+}
+
+model Action {
+  id          String       @id
+  name        String
+  description String?
+  haCalls     Json
+  status      ActionStatus @default(active)
+  roleActions RoleAction[]
+  auditLogs   AuditLog[]
+  createdAt   DateTime     @default(now())
+}
+
+model RoleAction {
+  roleId   String
+  actionId String
+  role     Role   @relation(fields: [roleId], references: [id], onDelete: Cascade)
+  action   Action @relation(fields: [actionId], references: [id], onDelete: Cascade)
+
+  @@id([roleId, actionId])
+}
+
+model AuditLog {
+  id          String   @id @default(cuid())
+  timestamp   DateTime @default(now())
+  clientId    String?
+  client      Client?  @relation(fields: [clientId], references: [id])
+  actionId    String?
+  action      Action?  @relation(fields: [actionId], references: [id])
+  actionIdRaw String
+  ip          String?
+  success     Boolean
+  error       String?
+}
