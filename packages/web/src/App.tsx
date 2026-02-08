@@ -1,6 +1,6 @@
 import { Fragment, useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { api, Action, Client, HaServiceCatalog, Role } from "./api";
+import { api, Action, Client, HaEntity, HaServiceCatalog, Role } from "./api";
 import { Badge } from "./components/ui/badge";
 import { Button } from "./components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "./components/ui/card";
@@ -31,12 +31,12 @@ export default function App() {
     name: "",
     description: "",
     status: "active" as const,
-    roleIds: "",
+    roleIds: [] as string[],
     calls: [
       {
         domain: "",
         service: "",
-        entityIds: "",
+        entityIds: [] as string[],
         data: ""
       }
     ]
@@ -87,11 +87,26 @@ export default function App() {
     enabled: authenticated && tab === "Actions"
   });
   const haServices = servicesQuery.data?.services ?? [];
+  const entitiesQuery = useQuery({
+    queryKey: ["ha-entities"],
+    queryFn: () => api.haEntities(),
+    enabled: authenticated && tab === "Actions"
+  });
+  const haEntities = entitiesQuery.data?.entities ?? [];
   const serviceMap = useMemo(() => {
     const map = new Map<string, string[]>();
     haServices.forEach((entry) => map.set(entry.domain, entry.services));
     return map;
   }, [haServices]);
+  const entityMap = useMemo(() => {
+    const map = new Map<string, HaEntity[]>();
+    haEntities.forEach((entity) => {
+      const list = map.get(entity.domain) ?? [];
+      list.push(entity);
+      map.set(entity.domain, list);
+    });
+    return map;
+  }, [haEntities]);
 
   const loginMutation = useMutation({
     mutationFn: (pwd: string) => api.login(pwd),
@@ -119,8 +134,8 @@ export default function App() {
         name: "",
         description: "",
         status: "active",
-        roleIds: "",
-        calls: [{ domain: "", service: "", entityIds: "", data: "" }]
+        roleIds: [],
+        calls: [{ domain: "", service: "", entityIds: [], data: "" }]
       });
       queryClient.invalidateQueries({ queryKey: ["actions"] });
     }
@@ -269,16 +284,36 @@ export default function App() {
                     value={actionForm.description}
                     onChange={(event) => setActionForm({ ...actionForm, description: event.target.value })}
                   />
-                  <Input
-                    placeholder="role ids (comma separated)"
-                    value={actionForm.roleIds}
-                    onChange={(event) => setActionForm({ ...actionForm, roleIds: event.target.value })}
-                  />
+                  <div className="rounded-md border border-slate-800 bg-slate-950/40 p-3">
+                    <p className="text-xs uppercase text-slate-400">Allowed Roles</p>
+                    <div className="mt-2 grid gap-2 text-sm text-slate-200 md:grid-cols-2">
+                      {roleOptions.map((role) => (
+                        <label key={role.id} className="flex items-center gap-2">
+                          <input
+                            type="checkbox"
+                            className="h-4 w-4 rounded border-slate-600 bg-slate-900 text-emerald-400"
+                            checked={actionForm.roleIds.includes(role.id)}
+                            onChange={(event) => {
+                              const next = event.target.checked
+                                ? [...actionForm.roleIds, role.id]
+                                : actionForm.roleIds.filter((id) => id !== role.id);
+                              setActionForm({ ...actionForm, roleIds: next });
+                            }}
+                          />
+                          <span className="text-xs text-slate-400">{role.id}</span>
+                          <span>{role.name}</span>
+                        </label>
+                      ))}
+                    </div>
+                  </div>
                 </div>
                 <div className="space-y-4">
                   {actionForm.calls.map((call, index) => {
                     const servicesForDomain = call.domain
                       ? serviceMap.get(call.domain.trim()) ?? []
+                      : [];
+                    const entitiesForDomain = call.domain
+                      ? entityMap.get(call.domain.trim()) ?? []
                       : [];
 
                     return (
@@ -339,15 +374,41 @@ export default function App() {
                             }}
                           />
                         </div>
-                        <Input
-                          placeholder="entity_id(s) comma separated"
-                          value={call.entityIds}
-                          onChange={(event) => {
-                            const next = [...actionForm.calls];
-                            next[index] = { ...next[index], entityIds: event.target.value };
-                            setActionForm({ ...actionForm, calls: next });
-                          }}
-                        />
+                        <div className="space-y-2">
+                          <select
+                            multiple
+                            className="h-28 w-full rounded-md border border-slate-700 bg-slate-900 px-3 py-2 text-xs text-slate-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400"
+                            value={call.entityIds}
+                            onChange={(event) => {
+                              const selected = Array.from(event.target.selectedOptions).map(
+                                (option) => option.value
+                              );
+                              const next = [...actionForm.calls];
+                              next[index] = { ...next[index], entityIds: selected };
+                              setActionForm({ ...actionForm, calls: next });
+                            }}
+                            disabled={!call.domain}
+                          >
+                            {entitiesForDomain.map((entity) => (
+                              <option key={entity.entityId} value={entity.entityId}>
+                                {entity.name} ({entity.entityId})
+                              </option>
+                            ))}
+                          </select>
+                          <Input
+                            placeholder="entity_id(s) comma separated"
+                            value={call.entityIds.join(", ")}
+                            onChange={(event) => {
+                              const next = [...actionForm.calls];
+                              const parsed = event.target.value
+                                .split(",")
+                                .map((item) => item.trim())
+                                .filter(Boolean);
+                              next[index] = { ...next[index], entityIds: parsed };
+                              setActionForm({ ...actionForm, calls: next });
+                            }}
+                          />
+                        </div>
                       </div>
                       <div className="mt-3 space-y-2">
                         <p className="text-xs text-slate-500">
@@ -386,7 +447,7 @@ export default function App() {
                         ...actionForm,
                         calls: [
                           ...actionForm.calls,
-                          { domain: "", service: "", entityIds: "", data: "" }
+                          { domain: "", service: "", entityIds: [], data: "" }
                         ]
                       })
                     }
@@ -402,10 +463,7 @@ export default function App() {
                           if (!call.domain || !call.service) {
                             throw new Error("domain_service_required");
                           }
-                          const entityIds = call.entityIds
-                            .split(",")
-                            .map((item) => item.trim())
-                            .filter(Boolean);
+                          const entityIds = call.entityIds;
                           const data = call.data.trim() ? JSON.parse(call.data) : undefined;
                           return {
                             domain: call.domain.trim(),
@@ -419,17 +477,14 @@ export default function App() {
                           name: actionForm.name,
                           description: actionForm.description || undefined,
                           status: actionForm.status,
-                          roleIds: actionForm.roleIds
-                            .split(",")
-                            .map((item) => item.trim())
-                            .filter(Boolean),
+                          roleIds: actionForm.roleIds,
                           haCalls: parsed
                         });
                       } catch {
                         alert("Each call requires domain/service and valid JSON for data");
                       }
                     }}
-                    disabled={!actionForm.id || !actionForm.name || !actionForm.roleIds}
+                    disabled={!actionForm.id || !actionForm.name || actionForm.roleIds.length === 0}
                   >
                     액션 생성
                   </Button>

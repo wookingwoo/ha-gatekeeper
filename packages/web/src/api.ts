@@ -40,6 +40,12 @@ export type HaServiceCatalog = {
   services: string[];
 };
 
+export type HaEntity = {
+  entityId: string;
+  domain: string;
+  name: string;
+};
+
 type ApiResponse<T> = {
   ok: boolean;
 } & T;
@@ -106,5 +112,9 @@ export const api = {
   auditLogs: () => apiFetch<{ logs: AuditLog[] }>("/admin/audit-logs"),
   haServices: () => apiFetch<{ services: HaServiceCatalog[]; cached?: boolean }>(
     "/admin/ha/services"
-  )
+  ),
+  haEntities: (domain?: string) =>
+    apiFetch<{ entities: HaEntity[]; cached?: boolean }>(
+      domain ? `/admin/ha/entities?domain=${encodeURIComponent(domain)}` : "/admin/ha/entities"
+    )
 };

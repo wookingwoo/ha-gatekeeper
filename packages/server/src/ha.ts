@@ -16,6 +16,12 @@ export type HaServiceCatalog = {
   services: string[];
 };
 
+export type HaEntity = {
+  entityId: string;
+  domain: string;
+  name: string;
+};
+
 export async function callHaServices(calls: HaCall[]): Promise<HaCallResult[]> {
   const results: HaCallResult[] = [];
 
@@ -77,4 +83,31 @@ export async function fetchHaServices(): Promise<HaServiceCatalog[]> {
     domain: entry.domain,
     services: Object.keys(entry.services ?? {})
   }));
+}
+
+export async function fetchHaEntities(): Promise<HaEntity[]> {
+  const url = `${baseUrl}/api/states`;
+  const res = await fetch(url, {
+    method: "GET",
+    headers: {
+      Authorization: `Bearer ${env.HA_TOKEN}`,
+      "Content-Type": "application/json"
+    }
+  });
+
+  if (!res.ok) {
+    throw new Error(`ha_entities_failed:${res.status}`);
+  }
+
+  const data = (await res.json()) as Array<{
+    entity_id: string;
+    attributes?: { friendly_name?: string };
+  }>;
+
+  return data.map((entry) => {
+    const entityId = entry.entity_id;
+    const domain = entityId.split(".")[0] ?? "unknown";
+    const name = entry.attributes?.friendly_name ?? entityId;
+    return { entityId, domain, name };
+  });
 }

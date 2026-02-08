@@ -9,7 +9,7 @@ import crypto from "node:crypto";
 import { fileURLToPath } from "node:url";
 import { env, isProd } from "./env.js";
 import { prisma } from "./db.js";
-import { callHaServices, fetchHaServices } from "./ha.js";
+import { callHaServices, fetchHaEntities, fetchHaServices } from "./ha.js";
 import {
   auditQuerySchema,
   createActionSchema,
@@ -271,6 +271,8 @@ app.get("/admin/me", async (request) => ({
 
 let haServiceCache: { data: Awaited<ReturnType<typeof fetchHaServices>>; expiresAt: number } | null =
   null;
+let haEntityCache: { data: Awaited<ReturnType<typeof fetchHaEntities>>; expiresAt: number } | null =
+  null;
 
 app.get("/admin/roles", async (request, reply) => {
   if (!requireAdmin(request)) {
@@ -310,6 +312,30 @@ app.get("/admin/ha/services", async (request, reply) => {
     request.log.error({ err }, "ha_services_failed");
     return reply.status(502).send({ ok: false, error: "ha_services_failed" });
   }
+});
+
+app.get("/admin/ha/entities", async (request, reply) => {
+  if (!requireAdmin(request)) {
+    return reply.status(401).send({ ok: false, error: "unauthorized" });
+  }
+
+  const now = Date.now();
+  if (!haEntityCache || haEntityCache.expiresAt <= now) {
+    try {
+      const entities = await fetchHaEntities();
+      haEntityCache = { data: entities, expiresAt: now + 60_000 };
+    } catch (err) {
+      request.log.error({ err }, "ha_entities_failed");
+      return reply.status(502).send({ ok: false, error: "ha_entities_failed" });
+    }
+  }
+
+  const domain = typeof request.query === "object" ? (request.query as { domain?: string }).domain : undefined;
+  const payload = domain
+    ? haEntityCache.data.filter((entity) => entity.domain === domain)
+    : haEntityCache.data;
+
+  return reply.send({ ok: true, entities: payload, cached: true });
 });
 
 app.get("/admin/actions", async (request, reply) => {
