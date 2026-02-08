@@ -9,3 +9,4 @@ packages/server/prisma/prisma/dev.db
 packages/server/prisma/prisma/dev.db-journal
 .env
 .env.*
+!.env.example
