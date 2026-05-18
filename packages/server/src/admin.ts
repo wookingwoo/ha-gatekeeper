@@ -267,11 +267,27 @@ export const adminRoutes: FastifyPluginAsync = async (app) => {
 
     try {
       const result = await createQuickSetupAccess(prisma, parsed.data);
+      const actions = result.actions.map((action) => ({
+        id: action.id,
+        name: action.name,
+        description: action.description,
+        status: action.status as "active" | "disabled",
+        haCalls: JSON.parse(action.haCalls),
+        roleIds: [result.role.id]
+      }));
       return reply.send({
         ok: true,
         role: result.role,
-        actions: result.actions,
-        client: result.client,
+        actions,
+        client: {
+          id: result.client.id,
+          name: result.client.name,
+          status: result.client.status,
+          roleId: result.client.roleId,
+          roleName: result.role.name,
+          apiKeyPrefix: result.client.apiKeyPrefix,
+          createdAt: result.client.createdAt
+        },
         apiKey: result.apiKey
       });
     } catch (err) {
