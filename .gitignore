@@ -7,6 +7,10 @@ packages/server/prisma/dev.db
 packages/server/prisma/dev.db-journal
 packages/server/prisma/prisma/dev.db
 packages/server/prisma/prisma/dev.db-journal
+
 .env
 .env.*
 !.env.example
+
+.superpowers/
+docs/superpowers/
