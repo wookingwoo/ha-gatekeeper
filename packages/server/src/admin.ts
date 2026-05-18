@@ -9,9 +9,11 @@ import {
   createClientSchema,
   createRoleSchema,
   loginSchema,
+  quickSetupSchema,
   updateActionSchema,
   updateClientSchema
 } from "./schemas.js";
+import { createQuickSetupAccess } from "./quickSetup.js";
 import { generateApiKey } from "./security.js";
 
 function sendUnauthorized(reply: FastifyReply) {
@@ -251,6 +253,35 @@ export const adminRoutes: FastifyPluginAsync = async (app) => {
     });
 
     return reply.send({ ok: true, client, apiKey });
+  });
+
+  app.post("/quick-setup", async (request, reply) => {
+    if (!ensureAdmin(request, reply)) {
+      return;
+    }
+
+    const parsed = quickSetupSchema.safeParse(request.body ?? {});
+    if (!parsed.success) {
+      return reply.status(400).send({ ok: false, error: "invalid_body" });
+    }
+
+    try {
+      const result = await createQuickSetupAccess(prisma, parsed.data);
+      return reply.send({
+        ok: true,
+        role: result.role,
+        actions: result.actions,
+        client: result.client,
+        apiKey: result.apiKey
+      });
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "quick_setup_failed";
+      request.log.error({ err }, "quick_setup_failed");
+      if (message.startsWith("target_domain_mismatch")) {
+        return reply.status(400).send({ ok: false, error: "target_domain_mismatch" });
+      }
+      return reply.status(500).send({ ok: false, error: "quick_setup_failed" });
+    }
   });
 
   app.patch("/clients/:id", async (request, reply) => {
