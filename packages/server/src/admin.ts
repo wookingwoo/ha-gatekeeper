@@ -1,4 +1,5 @@
 import type { FastifyPluginAsync, FastifyReply, FastifyRequest } from "fastify";
+import crypto from "node:crypto";
 import { prisma } from "./db.js";
 import { env } from "./env.js";
 import { fetchHaEntities, fetchHaServices } from "./ha.js";
@@ -24,6 +25,10 @@ function ensureAdmin(request: FastifyRequest, reply: FastifyReply) {
     return false;
   }
   return true;
+}
+
+function createPolicyId(domain: string, service: string): string {
+  return `${domain}.${service}.${crypto.randomBytes(4).toString("hex")}`;
 }
 
 export const adminRoutes: FastifyPluginAsync = async (app) => {
@@ -150,7 +155,9 @@ export const adminRoutes: FastifyPluginAsync = async (app) => {
 
     const action = await prisma.action.create({
       data: {
-        id: parsed.data.id,
+        id:
+          parsed.data.id ??
+          createPolicyId(parsed.data.haCalls[0].domain, parsed.data.haCalls[0].service),
         name: parsed.data.name,
         description: parsed.data.description,
         haCalls: JSON.stringify(parsed.data.haCalls),

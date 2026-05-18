@@ -1,10 +1,11 @@
 # ha-gatekeeper
 
-A single-container API gateway for Home Assistant that allows limited, audited actions without exposing a long-lived access token.
+A single-container API gateway for Home Assistant service calls that allows limited, audited access without exposing a long-lived access token.
 
 ## Key Features
 
-- API key based public action calls
+- Home Assistant compatible service API shape
+- Bearer token based public service calls
 - Role-based access control (RBAC)
 - Audit log storage and query
 - Admin dashboard with session login
@@ -77,10 +78,22 @@ docker run -p 8080:8080 \
 
 ## Public API
 
-`POST /v1/actions/:actionId`
+`POST /api/services/:domain/:service`
 
-- Header: `X-API-Key`
-- Response: execution summary only (no internal Home Assistant data exposure)
+- Header: `Authorization: Bearer <GATEKEEPER_CLIENT_KEY>`
+- Body: Home Assistant service data, including `entity_id` or `target.entity_id`
+- Response: Home Assistant response status and body are passed through
+
+Example:
+
+```bash
+curl -X POST http://localhost:8080/api/services/light/turn_on \
+  -H "Authorization: Bearer <GATEKEEPER_CLIENT_KEY>" \
+  -H "Content-Type: application/json" \
+  -d '{"entity_id":"light.living_room"}'
+```
+
+Gatekeeper only exposes service calls that match an active service policy for the client role. Requests using unsupported targets such as `area_id` or `device_id`, missing entity IDs, or entities outside the policy allowlist are rejected before reaching Home Assistant. Entity-less services must be explicitly enabled in the policy.
 
 ## Admin API
 
@@ -88,8 +101,8 @@ docker run -p 8080:8080 \
 - `POST /admin/logout`
 - `GET /admin/roles`
 - `POST /admin/roles`
-- `GET /admin/actions`
-- `POST /admin/actions`
+- `GET /admin/actions` (service policies)
+- `POST /admin/actions` (service policies)
 - `GET /admin/clients`
 - `POST /admin/clients`
 - `POST /admin/clients/:id/rotate-key`

@@ -1,13 +1,18 @@
 import { z } from "zod";
 
-export const haCallSchema = z.object({
-  domain: z.string().min(1),
-  service: z.string().min(1),
-  entityIds: z.array(z.string().min(1)).optional(),
-  data: z.record(z.unknown()).optional()
-});
+export const haCallSchema = z
+  .object({
+    domain: z.string().min(1),
+    service: z.string().min(1),
+    entityIds: z.array(z.string().min(1)).optional(),
+    allowNoEntity: z.boolean().default(false),
+    data: z.record(z.unknown()).optional()
+  })
+  .refine((call) => call.allowNoEntity || (call.entityIds?.length ?? 0) > 0, {
+    message: "entityIds or allowNoEntity is required"
+  });
 
-export const haCallsSchema = z.array(haCallSchema).min(1);
+export const haCallsSchema = z.array(haCallSchema).min(1).max(1);
 
 export type HaCall = z.infer<typeof haCallSchema>;
 
@@ -16,7 +21,7 @@ export const createRoleSchema = z.object({
 });
 
 export const createActionSchema = z.object({
-  id: z.string().min(1),
+  id: z.string().min(1).optional(),
   name: z.string().min(1),
   description: z.string().optional(),
   haCalls: haCallsSchema,

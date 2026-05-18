@@ -8,8 +8,15 @@ export type Action = {
   name: string;
   description?: string | null;
   status: "active" | "disabled";
-  haCalls: unknown;
+  haCalls: HaCall[];
   roleIds: string[];
+};
+
+export type HaCall = {
+  domain: string;
+  service: string;
+  entityIds?: string[];
+  allowNoEntity?: boolean;
 };
 
 export type Client = {
@@ -84,11 +91,11 @@ export const api = {
     }),
   actions: () => apiFetch<{ actions: Action[] }>("/admin/actions"),
   createAction: (payload: {
-    id: string;
+    id?: string;
     name: string;
     description?: string;
     status: "active" | "disabled";
-    haCalls: unknown;
+    haCalls: HaCall[];
     roleIds: string[];
   }) =>
     apiFetch<{ action: Action }>("/admin/actions", {

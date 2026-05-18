@@ -14,7 +14,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "./components/ui/card";
 import { Input } from "./components/ui/input";
 import { ActionFormState, ClientFormState } from "./types";
 
-const tabs = ["Overview", "Roles", "Actions", "Clients", "Audit"] as const;
+const tabs = ["Overview", "Roles", "Service Policies", "Clients", "Audit"] as const;
 
 type Tab = (typeof tabs)[number];
 
@@ -29,14 +29,12 @@ export default function App() {
     description: "",
     status: "active" as const,
     roleIds: [] as string[],
-    calls: [
-      {
-        domain: "",
-        service: "",
-        entityIds: [] as string[],
-        data: ""
-      }
-    ]
+    call: {
+      domain: "",
+      service: "",
+      entityIds: [] as string[],
+      allowNoEntity: false
+    }
   });
   const [clientForm, setClientForm] = useState<ClientFormState>({
     name: "",
@@ -81,13 +79,13 @@ export default function App() {
   const servicesQuery = useQuery({
     queryKey: ["ha-services"],
     queryFn: api.haServices,
-    enabled: authenticated && tab === "Actions"
+    enabled: authenticated && tab === "Service Policies"
   });
   const haServices = servicesQuery.data?.services ?? [];
   const entitiesQuery = useQuery({
     queryKey: ["ha-entities"],
     queryFn: () => api.haEntities(),
-    enabled: authenticated && tab === "Actions"
+    enabled: authenticated && tab === "Service Policies"
   });
   const haEntities = entitiesQuery.data?.entities ?? [];
   const serviceMap = useMemo(() => {
@@ -132,7 +130,7 @@ export default function App() {
         description: "",
         status: "active",
         roleIds: [],
-        calls: [{ domain: "", service: "", entityIds: [], data: "" }]
+        call: { domain: "", service: "", entityIds: [], allowNoEntity: false }
       });
       queryClient.invalidateQueries({ queryKey: ["actions"] });
     }
@@ -186,7 +184,7 @@ export default function App() {
         <header className="flex flex-wrap items-center justify-between gap-4">
           <div>
             <h1 className="text-3xl font-semibold text-slate-50">ha-gatekeeper</h1>
-            <p className="text-sm text-slate-400">Manage Home Assistant Action Gateway</p>
+            <p className="text-sm text-slate-400">Manage Home Assistant service access</p>
           </div>
           <div className="flex items-center gap-3">
             <Button variant="secondary" onClick={() => logoutMutation.mutate()}>
@@ -212,12 +210,12 @@ export default function App() {
             <CardHeader>
               <CardTitle>Operations Overview</CardTitle>
               <p className="text-sm text-slate-400">
-                See active roles, actions, and client status at a glance.
+                See active roles, service policies, and client status at a glance.
               </p>
             </CardHeader>
             <CardContent className="grid gap-4 md:grid-cols-3">
               <StatCard title="Roles" value={roleOptions.length} />
-              <StatCard title="Actions" value={actionsQuery.data?.actions.length ?? 0} />
+              <StatCard title="Policies" value={actionsQuery.data?.actions.length ?? 0} />
               <StatCard title="Clients" value={clientsQuery.data?.clients.length ?? 0} />
             </CardContent>
           </Card>
@@ -225,7 +223,7 @@ export default function App() {
 
         {tab === "Roles" && (
           <div className="space-y-6">
-            <SectionHeader title="Roles" subtitle="Define roles that control access to actions." />
+            <SectionHeader title="Roles" subtitle="Define roles that control service access." />
             <Card className="glass">
               <CardContent className="space-y-4">
                 <div className="flex flex-wrap gap-2">
@@ -247,11 +245,11 @@ export default function App() {
           </div>
         )}
 
-        {tab === "Actions" && (
+        {tab === "Service Policies" && (
           <div className="space-y-6">
             <SectionHeader
-              title="Actions"
-              subtitle="Configure Home Assistant service calls with an allowlist."
+              title="Service Policies"
+              subtitle="Allow Home Assistant service endpoints by role and entity."
             />
             <Card className="glass">
               <CardContent>
@@ -262,33 +260,30 @@ export default function App() {
                   serviceMap={serviceMap}
                   entityMap={entityMap}
                   onCreate={() => {
-                    try {
-                      const parsed = actionForm.calls.map((call) => {
-                        if (!call.domain || !call.service) {
-                          throw new Error("domain_service_required");
-                        }
-                        const entityIds = call.entityIds;
-                        const data = call.data.trim() ? JSON.parse(call.data) : undefined;
-                        return {
+                    const call = actionForm.call;
+                    createActionMutation.mutate({
+                      id: actionForm.id || undefined,
+                      name: actionForm.name,
+                      description: actionForm.description || undefined,
+                      status: actionForm.status,
+                      roleIds: actionForm.roleIds,
+                      haCalls: [
+                        {
                           domain: call.domain.trim(),
                           service: call.service.trim(),
-                          entityIds: entityIds.length > 0 ? entityIds : undefined,
-                          data
-                        };
-                      });
-                      createActionMutation.mutate({
-                        id: actionForm.id,
-                        name: actionForm.name,
-                        description: actionForm.description || undefined,
-                        status: actionForm.status,
-                        roleIds: actionForm.roleIds,
-                        haCalls: parsed
-                      });
-                    } catch {
-                      alert("Each call requires domain/service and valid JSON for data");
-                    }
+                          entityIds: call.entityIds.length > 0 ? call.entityIds : undefined,
+                          allowNoEntity: call.allowNoEntity
+                        }
+                      ]
+                    });
                   }}
-                  isDisabled={!actionForm.id || !actionForm.name || actionForm.roleIds.length === 0}
+                  isDisabled={
+                    !actionForm.name ||
+                    !actionForm.call.domain ||
+                    !actionForm.call.service ||
+                    actionForm.roleIds.length === 0 ||
+                    (!actionForm.call.allowNoEntity && actionForm.call.entityIds.length === 0)
+                  }
                 />
               </CardContent>
             </Card>
@@ -298,10 +293,7 @@ export default function App() {
 
         {tab === "Clients" && (
           <div className="space-y-6">
-            <SectionHeader
-              title="Clients"
-              subtitle="Create API key clients and rotate keys."
-            />
+            <SectionHeader title="Clients" subtitle="Create bearer token clients and rotate keys." />
             <Card className="glass">
               <CardContent className="space-y-4">
                 <div className="grid gap-3 md:grid-cols-3">
@@ -337,7 +329,7 @@ export default function App() {
                 </div>
                 {issuedKey ? (
                   <div className="rounded-lg border border-emerald-400/40 bg-emerald-500/10 p-4 text-sm text-emerald-200">
-                    New API key: <span className="font-mono">{issuedKey}</span>
+                    New bearer token: <span className="font-mono">{issuedKey}</span>
                   </div>
                 ) : null}
               </CardContent>
@@ -354,7 +346,7 @@ export default function App() {
           <div className="space-y-6">
             <SectionHeader
               title="Audit Logs"
-              subtitle="Track all action requests in chronological order."
+              subtitle="Track all service requests in chronological order."
             />
             <AuditTable logs={auditQuery.data?.logs ?? []} />
           </div>

@@ -2,7 +2,7 @@ export type ActionCallForm = {
   domain: string;
   service: string;
   entityIds: string[];
-  data: string;
+  allowNoEntity: boolean;
 };
 
 export type ActionFormState = {
@@ -11,7 +11,7 @@ export type ActionFormState = {
   description: string;
   status: "active" | "disabled";
   roleIds: string[];
-  calls: ActionCallForm[];
+  call: ActionCallForm;
 };
 
 export type ClientFormState = {

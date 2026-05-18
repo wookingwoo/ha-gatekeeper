@@ -1,12 +1,11 @@
 import { fetch } from "undici";
 import { env } from "./env.js";
-import { HaCall } from "./schemas.js";
 
-export type HaCallResult = {
-  domain: string;
-  service: string;
+export type HaServiceProxyResult = {
   ok: boolean;
-  status?: number;
+  status: number;
+  contentType?: string;
+  body: string;
 };
 
 const baseUrl = env.HA_BASE_URL.replace(/\/$/, "");
@@ -22,46 +21,30 @@ export type HaEntity = {
   name: string;
 };
 
-export async function callHaServices(calls: HaCall[]): Promise<HaCallResult[]> {
-  const results: HaCallResult[] = [];
+export async function proxyHaServiceCall(
+  domain: string,
+  service: string,
+  body: Record<string, unknown>,
+  queryString = ""
+): Promise<HaServiceProxyResult> {
+  const url = `${baseUrl}/api/services/${encodeURIComponent(domain)}/${encodeURIComponent(
+    service
+  )}${queryString}`;
+  const res = await fetch(url, {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${env.HA_TOKEN}`,
+      "Content-Type": "application/json"
+    },
+    body: JSON.stringify(body)
+  });
 
-  for (const call of calls) {
-    const payload: Record<string, unknown> = {
-      ...(call.data ?? {})
-    };
-    if (call.entityIds && call.entityIds.length > 0) {
-      payload.entity_id = call.entityIds;
-    }
-
-    const url = `${baseUrl}/api/services/${call.domain}/${call.service}`;
-    const res = await fetch(url, {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${env.HA_TOKEN}`,
-        "Content-Type": "application/json"
-      },
-      body: JSON.stringify(payload)
-    });
-
-    if (!res.ok) {
-      results.push({
-        domain: call.domain,
-        service: call.service,
-        ok: false,
-        status: res.status
-      });
-      throw new Error(`ha_request_failed:${res.status}`);
-    }
-
-    results.push({
-      domain: call.domain,
-      service: call.service,
-      ok: true,
-      status: res.status
-    });
-  }
-
-  return results;
+  return {
+    ok: res.ok,
+    status: res.status,
+    contentType: res.headers.get("content-type") ?? undefined,
+    body: await res.text()
+  };
 }
 
 export async function fetchHaServices(): Promise<HaServiceCatalog[]> {

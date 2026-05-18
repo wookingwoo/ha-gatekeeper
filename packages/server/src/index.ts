@@ -9,10 +9,13 @@ import crypto from "node:crypto";
 import { fileURLToPath } from "node:url";
 import { env, isProd } from "./env.js";
 import { prisma } from "./db.js";
-import { callHaServices } from "./ha.js";
+import { proxyHaServiceCall } from "./ha.js";
 import {
-  haCallsSchema
-} from "./schemas.js";
+  asServiceRequestBody,
+  extractRequestedEntityIds,
+  parseServicePolicy,
+  policyAllowsEntities
+} from "./policy.js";
 import {
   getApiKeyPrefix,
   hashApiKey,
@@ -85,12 +88,37 @@ async function logAudit(params: {
   }
 }
 
-app.post("/v1/actions/:actionId", async (request, reply) => {
-  const actionIdRaw = (request.params as { actionId: string }).actionId;
+function getBearerToken(authorization: string | undefined): string | null {
+  if (!authorization) {
+    return null;
+  }
+  const [scheme, token] = authorization.trim().split(/\s+/, 2);
+  if (scheme?.toLowerCase() !== "bearer" || !token) {
+    return null;
+  }
+  return token;
+}
+
+async function findClientByApiKey(apiKey: string) {
+  const prefix = getApiKeyPrefix(apiKey);
+  const candidates = await prisma.client.findMany({
+    where: { apiKeyPrefix: prefix },
+    include: { role: true }
+  });
+  const computedHash = hashApiKey(apiKey);
+
+  return candidates.find((candidate) => timingSafeEqual(computedHash, candidate.apiKeyHash)) ?? null;
+}
+
+app.post("/api/services/:domain/:service", async (request, reply) => {
+  const { domain, service } = request.params as { domain: string; service: string };
+  const actionIdRaw = `${domain}.${service}`;
   const ip = request.ip ?? null;
 
-  const apiKeyHeader = request.headers["x-api-key"];
-  const apiKey = Array.isArray(apiKeyHeader) ? apiKeyHeader[0] : apiKeyHeader;
+  const authorization = Array.isArray(request.headers.authorization)
+    ? request.headers.authorization[0]
+    : request.headers.authorization;
+  const apiKey = getBearerToken(authorization);
 
   if (!apiKey) {
     await logAudit({
@@ -99,33 +127,16 @@ app.post("/v1/actions/:actionId", async (request, reply) => {
       actionIdRaw,
       ip,
       success: false,
-      error: "missing_api_key"
+      error: "missing_bearer_token"
     });
-    return reply.status(401).send({ ok: false, error: "missing_api_key" });
+    return reply.status(401).send({ ok: false, error: "missing_bearer_token" });
   }
 
-  const prefix = getApiKeyPrefix(apiKey);
-  const client = await prisma.client.findFirst({
-    where: { apiKeyPrefix: prefix },
-    include: { role: true }
-  });
+  const client = await findClientByApiKey(apiKey);
 
   if (!client) {
     await logAudit({
       clientId: null,
-      actionId: null,
-      actionIdRaw,
-      ip,
-      success: false,
-      error: "invalid_api_key"
-    });
-    return reply.status(401).send({ ok: false, error: "invalid_api_key" });
-  }
-
-  const computedHash = hashApiKey(apiKey);
-  if (!timingSafeEqual(computedHash, client.apiKeyHash)) {
-    await logAudit({
-      clientId: client.id,
       actionId: null,
       actionIdRaw,
       ip,
@@ -147,97 +158,115 @@ app.post("/v1/actions/:actionId", async (request, reply) => {
     return reply.status(403).send({ ok: false, error: "client_disabled" });
   }
 
-  const action = await prisma.action.findUnique({
-    where: { id: actionIdRaw },
-    include: { roleActions: true }
-  });
-
-  if (!action) {
+  const body = asServiceRequestBody(request.body);
+  if (!body) {
     await logAudit({
       clientId: client.id,
       actionId: null,
       actionIdRaw,
       ip,
       success: false,
-      error: "action_not_found"
+      error: "invalid_body"
     });
-    return reply.status(404).send({ ok: false, error: "action_not_found" });
+    return reply.status(400).send({ ok: false, error: "invalid_body" });
   }
 
-  if (action.status !== "active") {
+  const entityExtraction = extractRequestedEntityIds(body);
+  if (!entityExtraction.ok) {
     await logAudit({
       clientId: client.id,
-      actionId: action.id,
+      actionId: null,
       actionIdRaw,
       ip,
       success: false,
-      error: "action_disabled"
+      error: entityExtraction.error
     });
-    return reply.status(403).send({ ok: false, error: "action_disabled" });
+    return reply.status(403).send({ ok: false, error: entityExtraction.error });
   }
 
-  const allowed = await prisma.roleAction.findUnique({
+  const roleActions = await prisma.action.findMany({
     where: {
-      roleId_actionId: {
-        roleId: client.roleId,
-        actionId: action.id
+      status: "active",
+      roleActions: {
+        some: { roleId: client.roleId }
       }
-    }
+    },
+    orderBy: { createdAt: "desc" }
   });
 
-  if (!allowed) {
+  const servicePolicies: Array<{
+    action: (typeof roleActions)[number];
+    policy: NonNullable<ReturnType<typeof parseServicePolicy>>;
+  }> = [];
+  for (const action of roleActions) {
+    const policy = parseServicePolicy(action);
+    if (policy?.domain === domain && policy.service === service) {
+      servicePolicies.push({ action, policy });
+    }
+  }
+
+  const matchedPolicy = servicePolicies.find((entry) =>
+    policyAllowsEntities(entry.policy, entityExtraction.entityIds).ok
+  );
+
+  if (!matchedPolicy) {
+    const denial = servicePolicies[0]
+      ? policyAllowsEntities(servicePolicies[0].policy, entityExtraction.entityIds)
+      : null;
+    const error = denial && !denial.ok ? denial.error : "forbidden";
     await logAudit({
       clientId: client.id,
-      actionId: action.id,
+      actionId: servicePolicies[0]?.action.id ?? null,
       actionIdRaw,
       ip,
       success: false,
-      error: "forbidden"
+      error
     });
-    return reply.status(403).send({ ok: false, error: "forbidden" });
+    return reply.status(403).send({ ok: false, error });
   }
 
   try {
-    const haCalls = haCallsSchema.parse(JSON.parse(action.haCalls));
-    const results = await callHaServices(haCalls);
+    const queryIndex = request.url.indexOf("?");
+    const queryString = queryIndex >= 0 ? request.url.slice(queryIndex) : "";
+    const haResponse = await proxyHaServiceCall(domain, service, body, queryString);
 
     await logAudit({
       clientId: client.id,
-      actionId: action.id,
+      actionId: matchedPolicy.action.id,
       actionIdRaw,
       ip,
-      success: true
+      success: haResponse.ok,
+      error: haResponse.ok ? null : `ha_request_failed:${haResponse.status}`
     });
 
-    return reply.send({
-      ok: true,
-      actionId: action.id,
-      calls: results.map((r) => ({
-        domain: r.domain,
-        service: r.service,
-        ok: r.ok
-      }))
-    });
+    if (haResponse.contentType) {
+      reply.header("content-type", haResponse.contentType);
+    }
+    return reply.status(haResponse.status).send(haResponse.body);
   } catch (err) {
     const message = err instanceof Error ? err.message : "unknown_error";
     await logAudit({
       clientId: client.id,
-      actionId: action.id,
+      actionId: matchedPolicy.action.id,
       actionIdRaw,
       ip,
       success: false,
       error: message
     });
 
-    request.log.error({ err }, "action_failed");
-    return reply.status(500).send({ ok: false, error: "action_failed" });
+    request.log.error({ err }, "ha_proxy_failed");
+    return reply.status(502).send({ ok: false, error: "ha_proxy_failed" });
   }
 });
 
 await app.register(adminRoutes, { prefix: "/admin" });
 
 app.setNotFoundHandler((request, reply) => {
-  if (request.raw.url?.startsWith("/v1/") || request.raw.url?.startsWith("/admin/")) {
+  if (
+    request.raw.url?.startsWith("/api/") ||
+    request.raw.url?.startsWith("/v1/") ||
+    request.raw.url?.startsWith("/admin/")
+  ) {
     return reply.status(404).send({ ok: false, error: "not_found" });
   }
 

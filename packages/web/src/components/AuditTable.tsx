@@ -12,7 +12,7 @@ export function AuditTable({ logs }: { logs: AuditLog[] }) {
             <TableRow>
               <TableHead>Time</TableHead>
               <TableHead>Client</TableHead>
-              <TableHead>Action</TableHead>
+              <TableHead>Service</TableHead>
               <TableHead>Status</TableHead>
               <TableHead>Error</TableHead>
             </TableRow>
