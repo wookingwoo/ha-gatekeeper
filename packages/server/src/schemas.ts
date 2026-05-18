@@ -57,3 +57,17 @@ export const auditQuerySchema = z.object({
   limit: z.coerce.number().int().min(1).max(200).default(50),
   offset: z.coerce.number().int().min(0).default(0)
 });
+
+export const quickSetupUseCaseSchema = z.enum([
+  "control_lights",
+  "control_switches",
+  "run_scripts"
+]);
+
+export type QuickSetupUseCase = z.infer<typeof quickSetupUseCaseSchema>;
+
+export const quickSetupSchema = z.object({
+  useCase: quickSetupUseCaseSchema,
+  targetEntityIds: z.array(z.string().min(1)).min(1),
+  tokenName: z.string().min(1).max(80).optional()
+});
