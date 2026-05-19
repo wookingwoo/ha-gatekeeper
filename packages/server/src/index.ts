@@ -9,13 +9,15 @@ import crypto from "node:crypto";
 import { fileURLToPath } from "node:url";
 import { env, isProd } from "./env.js";
 import { prisma } from "./db.js";
-import { proxyHaServiceCall } from "./ha.js";
+import { proxyHaServiceCall, proxyHaState } from "./ha.js";
 import {
   asServiceRequestBody,
-  extractRequestedEntityIds,
-  parseServicePolicy,
-  policyAllowsEntities
+  extractRequestedEntityIds
 } from "./policy.js";
+import {
+  findAllowedServicePermission,
+  findAllowedStatePermission
+} from "./permissions.js";
 import {
   getApiKeyPrefix,
   hashApiKey,
@@ -66,7 +68,7 @@ app.get("/healthz", async () => ({ ok: true }));
 
 async function logAudit(params: {
   clientId: string | null;
-  actionId: string | null;
+  permissionId: string | null;
   actionIdRaw: string;
   ip: string | null;
   success: boolean;
@@ -76,7 +78,7 @@ async function logAudit(params: {
     await prisma.auditLog.create({
       data: {
         clientId: params.clientId,
-        actionId: params.actionId,
+        permissionId: params.permissionId,
         actionIdRaw: params.actionIdRaw,
         ip: params.ip,
         success: params.success,
@@ -103,7 +105,7 @@ async function findClientByApiKey(apiKey: string) {
   const prefix = getApiKeyPrefix(apiKey);
   const candidates = await prisma.client.findMany({
     where: { apiKeyPrefix: prefix },
-    include: { role: true }
+    include: { permissions: true }
   });
   const computedHash = hashApiKey(apiKey);
 
@@ -123,7 +125,7 @@ app.post("/api/services/:domain/:service", async (request, reply) => {
   if (!apiKey) {
     await logAudit({
       clientId: null,
-      actionId: null,
+      permissionId: null,
       actionIdRaw,
       ip,
       success: false,
@@ -137,7 +139,7 @@ app.post("/api/services/:domain/:service", async (request, reply) => {
   if (!client) {
     await logAudit({
       clientId: null,
-      actionId: null,
+      permissionId: null,
       actionIdRaw,
       ip,
       success: false,
@@ -149,7 +151,7 @@ app.post("/api/services/:domain/:service", async (request, reply) => {
   if (client.status !== "active") {
     await logAudit({
       clientId: client.id,
-      actionId: null,
+      permissionId: null,
       actionIdRaw,
       ip,
       success: false,
@@ -162,7 +164,7 @@ app.post("/api/services/:domain/:service", async (request, reply) => {
   if (!body) {
     await logAudit({
       clientId: client.id,
-      actionId: null,
+      permissionId: null,
       actionIdRaw,
       ip,
       success: false,
@@ -175,7 +177,7 @@ app.post("/api/services/:domain/:service", async (request, reply) => {
   if (!entityExtraction.ok) {
     await logAudit({
       clientId: client.id,
-      actionId: null,
+      permissionId: null,
       actionIdRaw,
       ip,
       success: false,
@@ -184,45 +186,23 @@ app.post("/api/services/:domain/:service", async (request, reply) => {
     return reply.status(403).send({ ok: false, error: entityExtraction.error });
   }
 
-  const roleActions = await prisma.action.findMany({
-    where: {
-      status: "active",
-      roleActions: {
-        some: { roleId: client.roleId }
-      }
-    },
-    orderBy: { createdAt: "desc" }
-  });
-
-  const servicePolicies: Array<{
-    action: (typeof roleActions)[number];
-    policy: NonNullable<ReturnType<typeof parseServicePolicy>>;
-  }> = [];
-  for (const action of roleActions) {
-    const policy = parseServicePolicy(action);
-    if (policy?.domain === domain && policy.service === service) {
-      servicePolicies.push({ action, policy });
-    }
-  }
-
-  const matchedPolicy = servicePolicies.find((entry) =>
-    policyAllowsEntities(entry.policy, entityExtraction.entityIds).ok
+  const matchedPermission = findAllowedServicePermission(
+    client.permissions,
+    domain,
+    service,
+    entityExtraction.entityIds
   );
 
-  if (!matchedPolicy) {
-    const denial = servicePolicies[0]
-      ? policyAllowsEntities(servicePolicies[0].policy, entityExtraction.entityIds)
-      : null;
-    const error = denial && !denial.ok ? denial.error : "forbidden";
+  if (!matchedPermission.ok) {
     await logAudit({
       clientId: client.id,
-      actionId: servicePolicies[0]?.action.id ?? null,
+      permissionId: null,
       actionIdRaw,
       ip,
       success: false,
-      error
+      error: matchedPermission.error
     });
-    return reply.status(403).send({ ok: false, error });
+    return reply.status(403).send({ ok: false, error: matchedPermission.error });
   }
 
   try {
@@ -232,7 +212,7 @@ app.post("/api/services/:domain/:service", async (request, reply) => {
 
     await logAudit({
       clientId: client.id,
-      actionId: matchedPolicy.action.id,
+      permissionId: matchedPermission.permission.id,
       actionIdRaw,
       ip,
       success: haResponse.ok,
@@ -247,7 +227,7 @@ app.post("/api/services/:domain/:service", async (request, reply) => {
     const message = err instanceof Error ? err.message : "unknown_error";
     await logAudit({
       clientId: client.id,
-      actionId: matchedPolicy.action.id,
+      permissionId: matchedPermission.permission.id,
       actionIdRaw,
       ip,
       success: false,
@@ -256,6 +236,99 @@ app.post("/api/services/:domain/:service", async (request, reply) => {
 
     request.log.error({ err }, "ha_proxy_failed");
     return reply.status(502).send({ ok: false, error: "ha_proxy_failed" });
+  }
+});
+
+app.get("/api/states/:entityId", async (request, reply) => {
+  const { entityId } = request.params as { entityId: string };
+  const actionIdRaw = `states.${entityId}`;
+  const ip = request.ip ?? null;
+
+  const authorization = Array.isArray(request.headers.authorization)
+    ? request.headers.authorization[0]
+    : request.headers.authorization;
+  const apiKey = getBearerToken(authorization);
+
+  if (!apiKey) {
+    await logAudit({
+      clientId: null,
+      permissionId: null,
+      actionIdRaw,
+      ip,
+      success: false,
+      error: "missing_bearer_token"
+    });
+    return reply.status(401).send({ ok: false, error: "missing_bearer_token" });
+  }
+
+  const client = await findClientByApiKey(apiKey);
+
+  if (!client) {
+    await logAudit({
+      clientId: null,
+      permissionId: null,
+      actionIdRaw,
+      ip,
+      success: false,
+      error: "invalid_api_key"
+    });
+    return reply.status(401).send({ ok: false, error: "invalid_api_key" });
+  }
+
+  if (client.status !== "active") {
+    await logAudit({
+      clientId: client.id,
+      permissionId: null,
+      actionIdRaw,
+      ip,
+      success: false,
+      error: "client_disabled"
+    });
+    return reply.status(403).send({ ok: false, error: "client_disabled" });
+  }
+
+  const matchedPermission = findAllowedStatePermission(client.permissions, entityId);
+  if (!matchedPermission.ok) {
+    await logAudit({
+      clientId: client.id,
+      permissionId: null,
+      actionIdRaw,
+      ip,
+      success: false,
+      error: matchedPermission.error
+    });
+    return reply.status(403).send({ ok: false, error: matchedPermission.error });
+  }
+
+  try {
+    const haResponse = await proxyHaState(entityId);
+
+    await logAudit({
+      clientId: client.id,
+      permissionId: matchedPermission.permission.id,
+      actionIdRaw,
+      ip,
+      success: haResponse.ok,
+      error: haResponse.ok ? null : `ha_request_failed:${haResponse.status}`
+    });
+
+    if (haResponse.contentType) {
+      reply.header("content-type", haResponse.contentType);
+    }
+    return reply.status(haResponse.status).send(haResponse.body);
+  } catch (err) {
+    const message = err instanceof Error ? err.message : "unknown_error";
+    await logAudit({
+      clientId: client.id,
+      permissionId: matchedPermission.permission.id,
+      actionIdRaw,
+      ip,
+      success: false,
+      error: message
+    });
+
+    request.log.error({ err }, "ha_state_proxy_failed");
+    return reply.status(502).send({ ok: false, error: "ha_state_proxy_failed" });
   }
 });
 

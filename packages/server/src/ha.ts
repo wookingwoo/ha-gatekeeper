@@ -47,6 +47,24 @@ export async function proxyHaServiceCall(
   };
 }
 
+export async function proxyHaState(entityId: string): Promise<HaServiceProxyResult> {
+  const url = `${baseUrl}/api/states/${encodeURIComponent(entityId)}`;
+  const res = await fetch(url, {
+    method: "GET",
+    headers: {
+      Authorization: `Bearer ${env.HA_TOKEN}`,
+      "Content-Type": "application/json"
+    }
+  });
+
+  return {
+    ok: res.ok,
+    status: res.status,
+    contentType: res.headers.get("content-type") ?? undefined,
+    body: await res.text()
+  };
+}
+
 export async function fetchHaServices(): Promise<HaServiceCatalog[]> {
   const url = `${baseUrl}/api/services`;
   const res = await fetch(url, {
