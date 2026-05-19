@@ -40,8 +40,12 @@ export function AuditTable({ logs }: { logs: AuditLog[] }) {
                 </TableCell>
                 <TableCell>
                   <div className="font-mono text-xs text-slate-300">{log.actionIdRaw}</div>
-                  {log.actionName ? (
-                    <div className="text-xs text-slate-500">{log.actionName}</div>
+                  {log.permission ? (
+                    <div className="text-xs text-slate-500">
+                      {log.permission.kind === "state"
+                        ? "state read"
+                        : log.permission.services.join(", ")}
+                    </div>
                   ) : null}
                 </TableCell>
                 <TableCell>

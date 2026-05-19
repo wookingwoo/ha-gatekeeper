@@ -1,32 +1,27 @@
-export type Role = {
-  id: string;
-  name: string;
-};
-
-export type Action = {
-  id: string;
-  name: string;
-  description?: string | null;
-  status: "active" | "disabled";
-  haCalls: HaCall[];
-  roleIds: string[];
-};
-
-export type HaCall = {
+export type ServicePermission = {
+  id?: string;
+  kind: "service";
   domain: string;
-  service: string;
-  entityIds?: string[];
+  services: string[];
+  entityIds: string[];
   allowNoEntity?: boolean;
 };
+
+export type StatePermission = {
+  id?: string;
+  kind: "state";
+  entityIds: string[];
+};
+
+export type TokenPermission = ServicePermission | StatePermission;
 
 export type Client = {
   id: string;
   name: string;
   status: "active" | "disabled";
-  roleId: string;
-  roleName: string;
   apiKeyPrefix: string;
   createdAt: string;
+  permissions: TokenPermission[];
 };
 
 export type AuditLog = {
@@ -37,8 +32,8 @@ export type AuditLog = {
   ip?: string | null;
   clientId?: string | null;
   clientName?: string | null;
-  actionId?: string | null;
-  actionName?: string | null;
+  permissionId?: string | null;
+  permission?: TokenPermission | null;
   actionIdRaw: string;
 };
 
@@ -53,17 +48,12 @@ export type HaEntity = {
   name: string;
 };
 
-export type QuickSetupUseCase = "control_lights" | "control_switches" | "run_scripts";
-
 export type QuickSetupPayload = {
-  useCase: QuickSetupUseCase;
-  targetEntityIds: string[];
-  tokenName?: string;
+  name?: string;
+  permissions: TokenPermission[];
 };
 
 export type QuickSetupResult = {
-  role: Role;
-  actions: Action[];
   client: Client;
   apiKey: string;
 };
@@ -98,30 +88,11 @@ export const api = {
     }),
   logout: () => apiFetch<{}>("/admin/logout", { method: "POST" }),
   me: () => apiFetch<{ authenticated: boolean }>("/admin/me"),
-  roles: () => apiFetch<{ roles: Role[] }>("/admin/roles"),
-  createRole: (name: string) =>
-    apiFetch<{ role: Role }>("/admin/roles", {
-      method: "POST",
-      body: JSON.stringify({ name })
-    }),
-  actions: () => apiFetch<{ actions: Action[] }>("/admin/actions"),
-  createAction: (payload: {
-    id?: string;
-    name: string;
-    description?: string;
-    status: "active" | "disabled";
-    haCalls: HaCall[];
-    roleIds: string[];
-  }) =>
-    apiFetch<{ action: Action }>("/admin/actions", {
-      method: "POST",
-      body: JSON.stringify(payload)
-    }),
   clients: () => apiFetch<{ clients: Client[] }>("/admin/clients"),
   createClient: (payload: {
     name: string;
-    roleId: string;
     status: "active" | "disabled";
+    permissions: TokenPermission[];
   }) =>
     apiFetch<{ client: Client; apiKey: string }>("/admin/clients", {
       method: "POST",
@@ -131,6 +102,16 @@ export const api = {
     apiFetch<QuickSetupResult>("/admin/quick-setup", {
       method: "POST",
       body: JSON.stringify(payload)
+    }),
+  updateClient: (clientId: string, payload: { name?: string; status?: "active" | "disabled" }) =>
+    apiFetch<{ client: Client }>(`/admin/clients/${clientId}`, {
+      method: "PATCH",
+      body: JSON.stringify(payload)
+    }),
+  updateClientPermissions: (clientId: string, permissions: TokenPermission[]) =>
+    apiFetch<{ client: Client }>(`/admin/clients/${clientId}/permissions`, {
+      method: "PATCH",
+      body: JSON.stringify({ permissions })
     }),
   rotateClientKey: (clientId: string) =>
     apiFetch<{ client: Client; apiKey: string }>(`/admin/clients/${clientId}/rotate-key`, {
