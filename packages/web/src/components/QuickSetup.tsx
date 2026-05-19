@@ -1,46 +1,24 @@
 import { useMemo, useState } from "react";
-import type { HaEntity, QuickSetupPayload, QuickSetupResult, QuickSetupUseCase } from "../api";
-import type { QuickSetupState } from "../types";
-import { AccessPreview } from "./AccessPreview";
+import type { HaEntity, HaServiceCatalog, QuickSetupPayload, QuickSetupResult, TokenPermission } from "../api";
 import { HomeAssistantTokenHelp } from "./HomeAssistantTokenHelp";
-import { SearchableMultiSelect } from "./SearchableMultiSelect";
+import { defaultTokenPermission, PermissionEditor } from "./PermissionEditor";
 import { Button } from "./ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "./ui/card";
 import { Input } from "./ui/input";
 
-const useCases: Array<{
-  id: QuickSetupUseCase;
-  title: string;
-  description: string;
-  domain: string;
-}> = [
-  {
-    id: "control_lights",
-    title: "Control lights",
-    description: "Allow turn_on, turn_off, and toggle for selected lights.",
-    domain: "light"
-  },
-  {
-    id: "control_switches",
-    title: "Control switches",
-    description: "Allow turn_on and turn_off for selected switches.",
-    domain: "switch"
-  },
-  {
-    id: "run_scripts",
-    title: "Run scripts",
-    description: "Allow script.turn_on for selected Home Assistant scripts.",
-    domain: "script"
+function permissionIsComplete(permission: TokenPermission): boolean {
+  if (permission.entityIds.length === 0) {
+    return false;
   }
-];
-
-function defaultTokenName(useCase: QuickSetupUseCase | "") {
-  const found = useCases.find((item) => item.id === useCase);
-  return found ? `${found.title} token` : "";
+  if (permission.kind === "service") {
+    return Boolean(permission.domain && permission.services.length > 0);
+  }
+  return true;
 }
 
 export function QuickSetup({
   entities,
+  services,
   isLoadingEntities,
   hasEntityError,
   onRetryEntities,
@@ -49,6 +27,7 @@ export function QuickSetup({
   isSubmitting
 }: {
   entities: HaEntity[];
+  services: HaServiceCatalog[];
   isLoadingEntities: boolean;
   hasEntityError: boolean;
   onRetryEntities: () => void;
@@ -56,36 +35,36 @@ export function QuickSetup({
   result: QuickSetupResult | null;
   isSubmitting: boolean;
 }) {
-  const [state, setState] = useState<QuickSetupState>({
-    step: "use-case",
-    useCase: "",
-    targetEntityIds: [],
-    tokenName: ""
-  });
+  const [name, setName] = useState("Mom access");
+  const [permissions, setPermissions] = useState<TokenPermission[]>([defaultTokenPermission()]);
 
-  const selectedUseCase = useCases.find((item) => item.id === state.useCase);
-  const filteredEntities = useMemo(
-    () =>
-      selectedUseCase
-        ? entities.filter((entity) => entity.domain === selectedUseCase.domain)
-        : [],
-    [entities, selectedUseCase]
+  const canSubmit = useMemo(
+    () => Boolean(name.trim()) && permissions.length > 0 && permissions.every(permissionIsComplete),
+    [name, permissions]
   );
 
-  const canSubmit = Boolean(state.useCase && state.targetEntityIds.length > 0);
-  const tokenName = state.tokenName || defaultTokenName(state.useCase);
-
   if (result) {
-    const policy = result.actions[0]?.haCalls[0];
-    const firstEntityId = policy?.entityIds?.[0] ?? "";
-    const curl = policy
+    const servicePermission = result.client.permissions.find(
+      (permission): permission is Extract<TokenPermission, { kind: "service" }> =>
+        permission.kind === "service"
+    );
+    const statePermission = result.client.permissions.find(
+      (permission): permission is Extract<TokenPermission, { kind: "state" }> =>
+        permission.kind === "state"
+    );
+    const curl = servicePermission
       ? [
-          `curl -X POST /api/services/${policy.domain}/${policy.service}`,
+          `curl -X POST /api/services/${servicePermission.domain}/${servicePermission.services[0]}`,
           `  -H "Authorization: Bearer <TOKEN>"`,
           `  -H "Content-Type: application/json"`,
-          `  -d '{"entity_id":"${firstEntityId}"}'`
+          `  -d '{"entity_id":"${servicePermission.entityIds[0]}"}'`
         ].join(" \\\n")
-      : "";
+      : statePermission
+        ? [
+            `curl /api/states/${statePermission.entityIds[0]}`,
+            `  -H "Authorization: Bearer <TOKEN>"`
+          ].join(" \\\n")
+        : "";
 
     return (
       <Card className="glass">
@@ -97,14 +76,18 @@ export function QuickSetup({
           <div className="rounded-md border border-emerald-400/40 bg-emerald-500/10 p-4 font-mono text-sm text-emerald-200">
             {result.apiKey}
           </div>
-          <pre className="overflow-auto rounded-md border border-slate-800 bg-slate-950/70 p-4 text-xs text-emerald-200">
-            {curl}
-          </pre>
+          {curl ? (
+            <pre className="overflow-auto rounded-md border border-slate-800 bg-slate-950/70 p-4 text-xs text-emerald-200">
+              {curl}
+            </pre>
+          ) : null}
           <div className="flex flex-wrap gap-2">
             <Button onClick={() => navigator.clipboard.writeText(result.apiKey)}>Copy token</Button>
-            <Button variant="secondary" onClick={() => navigator.clipboard.writeText(curl)}>
-              Copy curl
-            </Button>
+            {curl ? (
+              <Button variant="secondary" onClick={() => navigator.clipboard.writeText(curl)}>
+                Copy curl
+              </Button>
+            ) : null}
           </div>
         </CardContent>
       </Card>
@@ -115,46 +98,19 @@ export function QuickSetup({
     <div className="grid gap-6 lg:grid-cols-[1fr_320px]">
       <Card className="glass">
         <CardHeader>
-          <CardTitle>Quick Setup</CardTitle>
+          <CardTitle>Quick Start</CardTitle>
           <p className="text-sm text-slate-400">
-            Create scoped Home Assistant access without editing roles or policies manually.
+            Create one token with only the controls and state reads it should be allowed to use.
           </p>
         </CardHeader>
         <CardContent className="space-y-6">
-          <div className="grid gap-2 md:grid-cols-4">
-            {["Use case", "Targets", "Review", "Token"].map((label) => (
-              <div
-                key={label}
-                className="rounded-md border border-slate-800 bg-slate-950/50 px-3 py-2 text-xs uppercase text-slate-400"
-              >
-                {label}
-              </div>
-            ))}
-          </div>
-
-          <div className="grid gap-3 md:grid-cols-3">
-            {useCases.map((item) => (
-              <button
-                key={item.id}
-                type="button"
-                className={`rounded-md border p-4 text-left transition-colors ${
-                  state.useCase === item.id
-                    ? "border-emerald-400/60 bg-emerald-500/10"
-                    : "border-slate-800 bg-slate-950/40 hover:bg-slate-900/70"
-                }`}
-                onClick={() =>
-                  setState({
-                    step: "targets",
-                    useCase: item.id,
-                    targetEntityIds: [],
-                    tokenName: defaultTokenName(item.id)
-                  })
-                }
-              >
-                <p className="font-semibold text-slate-100">{item.title}</p>
-                <p className="mt-2 text-sm text-slate-400">{item.description}</p>
-              </button>
-            ))}
+          <div className="space-y-2">
+            <label className="text-xs uppercase text-slate-400">Token name</label>
+            <Input
+              value={name}
+              onChange={(event) => setName(event.target.value)}
+              placeholder="Mom access"
+            />
           </div>
 
           {hasEntityError ? (
@@ -170,50 +126,17 @@ export function QuickSetup({
             </div>
           ) : null}
 
-          <div className="space-y-2">
-            <label className="text-xs uppercase text-slate-400">Targets</label>
-            <SearchableMultiSelect
-              values={state.targetEntityIds}
-              onValuesChange={(values) =>
-                setState({ ...state, step: "targets", targetEntityIds: values })
-              }
-              options={filteredEntities.map((entity) => ({
-                value: entity.entityId,
-                label: entity.name,
-                description: entity.entityId
-              }))}
-              placeholder={
-                selectedUseCase
-                  ? isLoadingEntities
-                    ? "Loading entities..."
-                    : "Select targets"
-                  : "Choose a use case first"
-              }
-              searchPlaceholder="Search by name or entity ID"
-              emptyText="No matching entities"
-              disabled={!selectedUseCase || isLoadingEntities || hasEntityError}
-            />
-            <p className="text-xs text-slate-500">Only selected entities will be allowed.</p>
-          </div>
-
-          <div className="space-y-2">
-            <label className="text-xs uppercase text-slate-400">Token name</label>
-            <Input
-              value={tokenName}
-              onChange={(event) => setState({ ...state, tokenName: event.target.value })}
-              placeholder="Living room lights"
-            />
-          </div>
+          <PermissionEditor
+            permissions={permissions}
+            onChange={setPermissions}
+            entities={entities}
+            services={services}
+            disabled={isSubmitting || isLoadingEntities || hasEntityError}
+          />
 
           <Button
-            disabled={!canSubmit || isSubmitting}
-            onClick={() =>
-              onCreate({
-                useCase: state.useCase as QuickSetupUseCase,
-                targetEntityIds: state.targetEntityIds,
-                tokenName
-              })
-            }
+            disabled={!canSubmit || isSubmitting || isLoadingEntities || hasEntityError}
+            onClick={() => onCreate({ name, permissions })}
           >
             Issue token
           </Button>
@@ -221,11 +144,21 @@ export function QuickSetup({
       </Card>
 
       <div className="space-y-4">
-        <AccessPreview
-          useCase={state.useCase}
-          targetCount={state.targetEntityIds.length}
-          tokenName={tokenName}
-        />
+        <Card className="glass">
+          <CardHeader>
+            <CardTitle>Token permissions</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-3 text-sm text-slate-300">
+            <div className="rounded-md border border-slate-800 bg-slate-950/50 p-3">
+              <p className="text-xs uppercase text-slate-500">Token</p>
+              <p>{name || "Name this token"}</p>
+            </div>
+            <div className="rounded-md border border-slate-800 bg-slate-950/50 p-3">
+              <p className="text-xs uppercase text-slate-500">Permissions</p>
+              <p>{permissions.length} rule{permissions.length === 1 ? "" : "s"}</p>
+            </div>
+          </CardContent>
+        </Card>
         <HomeAssistantTokenHelp />
       </div>
     </div>

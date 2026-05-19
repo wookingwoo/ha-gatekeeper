@@ -1,16 +1,6 @@
-import { HaCall, haCallsSchema } from "./schemas.js";
-
-type ActionPolicyRecord = {
-  haCalls: string;
-};
-
 type EntityExtractResult =
   | { ok: true; entityIds: string[] }
   | { ok: false; error: "invalid_body" | "invalid_target" | "invalid_entity_id" | "unsupported_target" };
-
-type PolicyAllowResult =
-  | { ok: true }
-  | { ok: false; error: "missing_entity_id" | "entity_not_allowed" };
 
 const UNSUPPORTED_TARGET_KEYS = ["area_id", "device_id", "floor_id", "label_id"] as const;
 
@@ -86,30 +76,4 @@ export function extractRequestedEntityIds(body: Record<string, unknown>): Entity
   }
 
   return { ok: true, entityIds: [...entityIds] };
-}
-
-export function parseServicePolicy(action: ActionPolicyRecord): HaCall | null {
-  try {
-    const parsed = haCallsSchema.safeParse(JSON.parse(action.haCalls));
-    if (!parsed.success) {
-      return null;
-    }
-    return parsed.data[0] ?? null;
-  } catch {
-    return null;
-  }
-}
-
-export function policyAllowsEntities(policy: HaCall, requestedEntityIds: string[]): PolicyAllowResult {
-  if (requestedEntityIds.length === 0) {
-    return policy.allowNoEntity ? { ok: true } : { ok: false, error: "missing_entity_id" };
-  }
-
-  const allowedEntityIds = new Set(policy.entityIds ?? []);
-  if (allowedEntityIds.size === 0) {
-    return { ok: false, error: "entity_not_allowed" };
-  }
-
-  const allowed = requestedEntityIds.every((entityId) => allowedEntityIds.has(entityId));
-  return allowed ? { ok: true } : { ok: false, error: "entity_not_allowed" };
 }
