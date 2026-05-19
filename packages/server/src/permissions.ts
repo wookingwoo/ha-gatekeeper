@@ -27,6 +27,19 @@ export type TokenPermissionRule =
       allowNoEntity: false;
     };
 
+export type TokenPermissionInput =
+  | {
+      kind: "service";
+      domain: string;
+      services: string[];
+      entityIds: string[];
+      allowNoEntity?: boolean;
+    }
+  | {
+      kind: "state";
+      entityIds: string[];
+    };
+
 type ServicePermissionResult =
   | { ok: true; permission: Extract<TokenPermissionRule, { kind: "service" }> }
   | { ok: false; error: "forbidden" | "missing_entity_id" | "entity_not_allowed" };
@@ -45,6 +58,26 @@ function parseStringArray(value: string): string[] | null {
   } catch {
     return null;
   }
+}
+
+export function serializePermission(input: TokenPermissionInput): Omit<TokenPermissionRecord, "id"> {
+  if (input.kind === "state") {
+    return {
+      kind: "state",
+      domain: null,
+      services: JSON.stringify([]),
+      entityIds: JSON.stringify(input.entityIds),
+      allowNoEntity: false
+    };
+  }
+
+  return {
+    kind: "service",
+    domain: input.domain,
+    services: JSON.stringify(input.services),
+    entityIds: JSON.stringify(input.entityIds),
+    allowNoEntity: input.allowNoEntity ?? false
+  };
 }
 
 export function parsePermission(record: TokenPermissionRecord): TokenPermissionRule | null {

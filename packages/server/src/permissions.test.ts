@@ -3,7 +3,8 @@ import test from "node:test";
 import {
   findAllowedServicePermission,
   findAllowedStatePermission,
-  parsePermission
+  parsePermission,
+  serializePermission
 } from "./permissions.js";
 
 const livingRoomControl = {
@@ -82,4 +83,38 @@ test("blocks state reads outside the permission", () => {
   const match = findAllowedStatePermission([windowState], "binary_sensor.front_door");
 
   assert.deepEqual(match, { ok: false, error: "entity_not_allowed" });
+});
+
+test("serializes a service permission for storage", () => {
+  assert.deepEqual(
+    serializePermission({
+      kind: "service",
+      domain: "switch",
+      services: ["turn_on", "turn_off"],
+      entityIds: ["switch.bathroom_fan"]
+    }),
+    {
+      kind: "service",
+      domain: "switch",
+      services: JSON.stringify(["turn_on", "turn_off"]),
+      entityIds: JSON.stringify(["switch.bathroom_fan"]),
+      allowNoEntity: false
+    }
+  );
+});
+
+test("serializes a state permission for storage", () => {
+  assert.deepEqual(
+    serializePermission({
+      kind: "state",
+      entityIds: ["binary_sensor.window_contact"]
+    }),
+    {
+      kind: "state",
+      domain: null,
+      services: JSON.stringify([]),
+      entityIds: JSON.stringify(["binary_sensor.window_contact"]),
+      allowNoEntity: false
+    }
+  );
 });
