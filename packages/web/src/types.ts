@@ -1,3 +1,5 @@
+import type { QuickSetupUseCase } from "./api";
+
 export type ActionCallForm = {
   domain: string;
   service: string;
@@ -18,4 +20,13 @@ export type ClientFormState = {
   name: string;
   roleId: string;
   status: "active" | "disabled";
+};
+
+export type QuickSetupStep = "use-case" | "targets" | "review" | "issued";
+
+export type QuickSetupState = {
+  step: QuickSetupStep;
+  useCase: QuickSetupUseCase | "";
+  targetEntityIds: string[];
+  tokenName: string;
 };

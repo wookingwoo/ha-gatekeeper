@@ -53,6 +53,21 @@ export type HaEntity = {
   name: string;
 };
 
+export type QuickSetupUseCase = "control_lights" | "control_switches" | "run_scripts";
+
+export type QuickSetupPayload = {
+  useCase: QuickSetupUseCase;
+  targetEntityIds: string[];
+  tokenName?: string;
+};
+
+export type QuickSetupResult = {
+  role: Role;
+  actions: Action[];
+  client: Client;
+  apiKey: string;
+};
+
 type ApiResponse<T> = {
   ok: boolean;
 } & T;
@@ -109,6 +124,11 @@ export const api = {
     status: "active" | "disabled";
   }) =>
     apiFetch<{ client: Client; apiKey: string }>("/admin/clients", {
+      method: "POST",
+      body: JSON.stringify(payload)
+    }),
+  quickSetup: (payload: QuickSetupPayload) =>
+    apiFetch<QuickSetupResult>("/admin/quick-setup", {
       method: "POST",
       body: JSON.stringify(payload)
     }),
