@@ -2,6 +2,7 @@ import { useMemo, useState } from "react";
 import type { HaEntity, QuickSetupPayload, QuickSetupResult, QuickSetupUseCase } from "../api";
 import type { QuickSetupState } from "../types";
 import { AccessPreview } from "./AccessPreview";
+import { HomeAssistantTokenHelp } from "./HomeAssistantTokenHelp";
 import { SearchableMultiSelect } from "./SearchableMultiSelect";
 import { Button } from "./ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "./ui/card";
@@ -159,7 +160,10 @@ export function QuickSetup({
           {hasEntityError ? (
             <div className="rounded-md border border-rose-400/40 bg-rose-500/10 p-4 text-sm text-rose-100">
               <p className="font-medium">Cannot load entities</p>
-              <p className="mt-1 text-rose-200/80">Check HA_BASE_URL and HA_TOKEN, then retry.</p>
+              <p className="mt-1 text-rose-200/80">
+                Check HA_BASE_URL and HA_TOKEN. If HA_TOKEN is missing, use the Home Assistant
+                token guide on this page, restart the server, then retry.
+              </p>
               <Button className="mt-3" variant="secondary" onClick={onRetryEntities}>
                 Retry
               </Button>
@@ -216,11 +220,14 @@ export function QuickSetup({
         </CardContent>
       </Card>
 
-      <AccessPreview
-        useCase={state.useCase}
-        targetCount={state.targetEntityIds.length}
-        tokenName={tokenName}
-      />
+      <div className="space-y-4">
+        <AccessPreview
+          useCase={state.useCase}
+          targetCount={state.targetEntityIds.length}
+          tokenName={tokenName}
+        />
+        <HomeAssistantTokenHelp />
+      </div>
     </div>
   );
 }
