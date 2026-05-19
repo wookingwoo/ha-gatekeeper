@@ -37,16 +37,45 @@ export const updateActionSchema = z.object({
   roleIds: z.array(z.string().min(1)).optional()
 });
 
+export const serviceTokenPermissionSchema = z
+  .object({
+    kind: z.literal("service"),
+    domain: z.string().min(1),
+    services: z.array(z.string().min(1)).min(1),
+    entityIds: z.array(z.string().min(1)).default([]),
+    allowNoEntity: z.boolean().default(false)
+  })
+  .refine((permission) => permission.allowNoEntity || permission.entityIds.length > 0, {
+    message: "entityIds or allowNoEntity is required"
+  });
+
+export const stateTokenPermissionSchema = z.object({
+  kind: z.literal("state"),
+  entityIds: z.array(z.string().min(1)).min(1)
+});
+
+export const tokenPermissionSchema = z.union([
+  serviceTokenPermissionSchema,
+  stateTokenPermissionSchema
+]);
+
+export type TokenPermissionInput = z.infer<typeof tokenPermissionSchema>;
+
+export const tokenPermissionsSchema = z.array(tokenPermissionSchema).min(1);
+
 export const createClientSchema = z.object({
-  name: z.string().min(1),
-  roleId: z.string().min(1),
-  status: z.enum(["active", "disabled"]).default("active")
+  name: z.string().min(1).max(80),
+  status: z.enum(["active", "disabled"]).default("active"),
+  permissions: tokenPermissionsSchema
 });
 
 export const updateClientSchema = z.object({
   name: z.string().min(1).optional(),
-  roleId: z.string().min(1).optional(),
   status: z.enum(["active", "disabled"]).optional()
+});
+
+export const updateClientPermissionsSchema = z.object({
+  permissions: tokenPermissionsSchema
 });
 
 export const loginSchema = z.object({
@@ -67,7 +96,6 @@ export const quickSetupUseCaseSchema = z.enum([
 export type QuickSetupUseCase = z.infer<typeof quickSetupUseCaseSchema>;
 
 export const quickSetupSchema = z.object({
-  useCase: quickSetupUseCaseSchema,
-  targetEntityIds: z.array(z.string().min(1)).min(1),
-  tokenName: z.string().min(1).max(80).optional()
+  name: z.string().min(1).max(80).optional(),
+  permissions: tokenPermissionsSchema
 });

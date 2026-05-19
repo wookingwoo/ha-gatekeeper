@@ -107,7 +107,7 @@ async function findClientByApiKey(apiKey: string) {
   });
   const computedHash = hashApiKey(apiKey);
 
-  return candidates.find((candidate) => timingSafeEqual(computedHash, candidate.apiKeyHash)) ?? null;
+  return candidates.find((candidate: any) => timingSafeEqual(computedHash, candidate.apiKeyHash)) ?? null;
 }
 
 app.post("/api/services/:domain/:service", async (request, reply) => {
