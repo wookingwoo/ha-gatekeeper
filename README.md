@@ -1,12 +1,14 @@
 # ha-gatekeeper
 
-A single-container API gateway for Home Assistant service calls that allows limited, audited access without exposing a long-lived access token.
+A single-container API gateway for Home Assistant that issues limited, audited bearer tokens without exposing your Home Assistant long-lived access token.
 
 ## Key Features
 
 - Home Assistant compatible service API shape
-- Bearer token based public service calls
-- Role-based access control (RBAC)
+- Bearer token based service calls and state reads
+- Per-token permission rules for selected entities and services
+- Editable token permissions after a token has been issued
+- Quick Start admin flow for creating scoped access without manual policy setup
 - Audit log storage and query
 - Admin dashboard with session login
 - Single-container deployment
@@ -54,6 +56,16 @@ npm run dev
 Admin UI: http://localhost:5173
 API: http://localhost:8080
 
+## Admin Workflow
+
+1. Log in to the admin dashboard.
+1. Use Quick Start to create a token.
+1. Select the exact Home Assistant entities and services the token can use.
+1. Share only the generated gatekeeper bearer token with the caller.
+1. Edit, rotate, disable, or delete the token later from the Tokens view.
+
+Each token has its own permission rules. For example, one token can allow `light.turn_on` and `light.turn_off` for `light.living_room`, allow `fan.turn_on` and `fan.turn_off` for `fan.bathroom`, and allow state reads for `binary_sensor.window`.
+
 ### Environment Notes
 
 - `ADMIN_SESSION_SECRET` must be a base64 string of at least 32 bytes. Example: `openssl rand -base64 32`.
@@ -78,6 +90,8 @@ docker run -p 8080:8080 \
 
 ## Public API
 
+### Call Home Assistant Services
+
 `POST /api/services/:domain/:service`
 
 - Header: `Authorization: Bearer <GATEKEEPER_CLIENT_KEY>`
@@ -93,20 +107,39 @@ curl -X POST http://localhost:8080/api/services/light/turn_on \
   -d '{"entity_id":"light.living_room"}'
 ```
 
-Gatekeeper only exposes service calls that match an active service policy for the client role. Requests using unsupported targets such as `area_id` or `device_id`, missing entity IDs, or entities outside the policy allowlist are rejected before reaching Home Assistant. Entity-less services must be explicitly enabled in the policy.
+### Read Entity State
+
+`GET /api/states/:entityId`
+
+- Header: `Authorization: Bearer <GATEKEEPER_CLIENT_KEY>`
+- Response: Home Assistant state response status and body are passed through
+
+Example:
+
+```bash
+curl http://localhost:8080/api/states/binary_sensor.window \
+  -H "Authorization: Bearer <GATEKEEPER_CLIENT_KEY>"
+```
+
+Gatekeeper only allows requests that match an active token permission. Service calls must match the requested domain, service, and entity allowlist. State reads must match an explicitly allowed entity. Requests using unsupported service targets such as `area_id`, `device_id`, `floor_id`, or `label_id`, missing entity IDs, or entities outside the token allowlist are rejected before reaching Home Assistant. Entity-less service calls must be explicitly enabled in the token permission.
 
 ## Admin API
 
 - `POST /admin/login`
 - `POST /admin/logout`
-- `GET /admin/roles`
-- `POST /admin/roles`
-- `GET /admin/actions` (service policies)
-- `POST /admin/actions` (service policies)
+- `GET /admin/me`
+- `GET /admin/ha/services`
+- `GET /admin/ha/entities`
 - `GET /admin/clients`
 - `POST /admin/clients`
+- `POST /admin/quick-setup`
+- `PATCH /admin/clients/:id`
+- `PATCH /admin/clients/:id/permissions`
 - `POST /admin/clients/:id/rotate-key`
+- `DELETE /admin/clients/:id`
 - `GET /admin/audit-logs`
+
+Client creation and permission updates accept token permission rules directly. The public API never receives the Home Assistant token; it only receives gatekeeper-issued bearer tokens.
 
 ## Contributing
 
