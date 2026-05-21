@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { projectCapabilities } from "./capabilities.js";
+import { buildCapabilitiesResponse, projectCapabilities } from "./capabilities.js";
 import type { TokenPermissionRecord } from "./permissions.js";
 
 test("projects service and state permissions into agent capabilities", () => {
@@ -111,5 +111,52 @@ test("ignores malformed permission records instead of widening capabilities", ()
     serviceActions: [],
     stateReads: ["sensor.safe"],
     unsupportedTargets: ["area_id", "device_id", "floor_id", "label_id"]
+  });
+});
+
+test("builds a public capabilities response for an authenticated client", () => {
+  const client = {
+    id: "client_1",
+    name: "Living Room Agent",
+    status: "active",
+    permissions: [
+      {
+        id: "perm_light",
+        kind: "service",
+        domain: "light",
+        services: JSON.stringify(["turn_on"]),
+        entityIds: JSON.stringify(["light.living_room"]),
+        allowNoEntity: false
+      },
+      {
+        id: "perm_temperature",
+        kind: "state",
+        domain: null,
+        services: JSON.stringify([]),
+        entityIds: JSON.stringify(["sensor.living_room_temperature"]),
+        allowNoEntity: false
+      }
+    ]
+  };
+
+  assert.deepEqual(buildCapabilitiesResponse(client), {
+    ok: true,
+    client: {
+      id: "client_1",
+      name: "Living Room Agent",
+      status: "active"
+    },
+    capabilities: {
+      serviceActions: [
+        {
+          domain: "light",
+          service: "turn_on",
+          entityIds: ["light.living_room"],
+          allowNoEntity: false
+        }
+      ],
+      stateReads: ["sensor.living_room_temperature"],
+      unsupportedTargets: ["area_id", "device_id", "floor_id", "label_id"]
+    }
   });
 });

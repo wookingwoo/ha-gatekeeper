@@ -13,6 +13,13 @@ export type AgentCapabilities = {
   unsupportedTargets: string[];
 };
 
+export type CapabilityClient = {
+  id: string;
+  name: string;
+  status: "active" | "disabled" | string;
+  permissions: TokenPermissionRecord[];
+};
+
 const unsupportedTargets = ["area_id", "device_id", "floor_id", "label_id"];
 
 type ServiceAccumulator = {
@@ -72,5 +79,17 @@ export function projectCapabilities(records: TokenPermissionRecord[]): AgentCapa
       ),
     stateReads: Array.from(stateReads).sort(),
     unsupportedTargets: [...unsupportedTargets]
+  };
+}
+
+export function buildCapabilitiesResponse(client: CapabilityClient) {
+  return {
+    ok: true,
+    client: {
+      id: client.id,
+      name: client.name,
+      status: client.status
+    },
+    capabilities: projectCapabilities(client.permissions)
   };
 }
