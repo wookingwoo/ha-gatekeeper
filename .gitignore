@@ -14,3 +14,4 @@ packages/server/prisma/prisma/dev.db-journal
 
 .superpowers/
 docs/superpowers/
+.worktrees/
