@@ -1,8 +1,9 @@
 import { Card, CardContent, CardHeader, CardTitle } from "./ui/card";
+import { cn } from "../lib/utils";
 
-export function HomeAssistantTokenHelp() {
+export function HomeAssistantTokenHelp({ className }: { className?: string }) {
   return (
-    <Card className="glass">
+    <Card className={cn("glass", className)}>
       <CardHeader>
         <CardTitle>Connect Home Assistant</CardTitle>
         <p className="text-sm text-slate-400">
