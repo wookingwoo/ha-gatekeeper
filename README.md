@@ -56,6 +56,26 @@ npm run dev
 Admin UI: http://localhost:5173
 API: http://localhost:8080
 
+## Testing
+
+Run unit tests.
+
+```bash
+npm run test -w packages/web
+npm run test -w packages/server
+```
+
+Run Playwright end-to-end tests.
+
+```bash
+npx playwright install chromium
+npx playwright install-deps chromium
+npm run e2e
+```
+
+The e2e suite expects the local admin password from `E2E_ADMIN_PASSWORD`, or
+`change-this-password` when the variable is not set.
+
 ## Admin Workflow
 
 1. Log in to the admin dashboard.

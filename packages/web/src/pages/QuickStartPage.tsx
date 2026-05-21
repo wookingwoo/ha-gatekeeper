@@ -1,0 +1,199 @@
+import { useMemo, useState } from "react";
+import type { HaEntity, HaServiceCatalog, QuickSetupPayload, QuickSetupResult, TokenPermission } from "../api";
+import { AccessSummary } from "../components/AccessSummary";
+import { DomainPermissionEditor } from "../components/DomainPermissionEditor";
+import { HomeAssistantTokenHelp } from "../components/HomeAssistantTokenHelp";
+import { Button } from "../components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "../components/ui/card";
+import { Input } from "../components/ui/input";
+import { createDefaultGroups, groupsAreComplete, groupsToPermissions } from "../lib/permissionGroups";
+
+function makeCurl(permissions: TokenPermission[]): string {
+  const servicePermission = permissions.find(
+    (permission): permission is Extract<TokenPermission, { kind: "service" }> =>
+      permission.kind === "service"
+  );
+  if (servicePermission) {
+    const entityId = servicePermission.entityIds[0] ?? "light.living_room";
+    return [
+      `curl -X POST /api/services/${servicePermission.domain}/${servicePermission.services[0]}`,
+      `  -H "Authorization: Bearer <TOKEN>"`,
+      `  -H "Content-Type: application/json"`,
+      `  -d '{"entity_id":"${entityId}"}'`
+    ].join(" \\\n");
+  }
+
+  const statePermission = permissions.find(
+    (permission): permission is Extract<TokenPermission, { kind: "state" }> =>
+      permission.kind === "state"
+  );
+  if (!statePermission) {
+    return "";
+  }
+  return [
+    `curl /api/states/${statePermission.entityIds[0]}`,
+    `  -H "Authorization: Bearer <TOKEN>"`
+  ].join(" \\\n");
+}
+
+export function QuickStartPage({
+  entities,
+  services,
+  isLoadingEntities,
+  hasEntityError,
+  onRetryEntities,
+  onCreate,
+  result,
+  onClearResult,
+  isSubmitting
+}: {
+  entities: HaEntity[];
+  services: HaServiceCatalog[];
+  isLoadingEntities: boolean;
+  hasEntityError: boolean;
+  onRetryEntities: () => void;
+  onCreate: (payload: QuickSetupPayload) => void;
+  result: QuickSetupResult | null;
+  onClearResult: () => void;
+  isSubmitting: boolean;
+}) {
+  const [name, setName] = useState("Mom access");
+  const [groups, setGroups] = useState(createDefaultGroups);
+  const [helpOpen, setHelpOpen] = useState(false);
+
+  const permissions = useMemo(() => groupsToPermissions(groups), [groups]);
+  const canSubmit =
+    Boolean(name.trim()) &&
+    permissions.length > 0 &&
+    groupsAreComplete(groups) &&
+    !isLoadingEntities &&
+    !hasEntityError;
+
+  if (result) {
+    const curl = makeCurl(result.client.permissions);
+    return (
+      <div className="space-y-6">
+        <section>
+          <h2 className="text-2xl font-semibold">Token issued</h2>
+          <p className="text-sm text-[var(--muted)]">Copy this token now. It will not be shown again.</p>
+        </section>
+
+        <Card>
+          <CardHeader>
+            <CardTitle>{result.client.name}</CardTitle>
+            <p className="text-sm text-[var(--muted)]">Bearer token</p>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="break-all rounded-md border border-[var(--primary-border)] bg-[var(--primary-soft)] p-4 font-mono text-sm text-[var(--primary)]">
+              {result.apiKey}
+            </div>
+            {curl ? (
+              <pre className="overflow-auto rounded-md border border-[var(--border)] bg-[var(--surface-muted)] p-4 text-xs text-[var(--foreground)]">
+                {curl}
+              </pre>
+            ) : null}
+            <div className="flex flex-wrap gap-2">
+              <Button onClick={() => navigator.clipboard.writeText(result.apiKey)}>Copy token</Button>
+              {curl ? (
+                <Button variant="secondary" onClick={() => navigator.clipboard.writeText(curl)}>
+                  Copy curl
+                </Button>
+              ) : null}
+              <Button variant="ghost" onClick={onClearResult}>
+                Create another token
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-6">
+      <section>
+        <h2 className="text-2xl font-semibold">Create scoped access</h2>
+        <p className="mt-1 text-sm text-[var(--muted)]">
+          Issue a Gatekeeper token that only allows selected Home Assistant domains, services, and
+          entities.
+        </p>
+      </section>
+
+      {hasEntityError ? (
+        <div className="rounded-lg border border-[var(--danger-border)] bg-[var(--danger-soft)] p-4 text-sm text-[var(--danger)]">
+          <p className="font-medium">Cannot load Home Assistant data</p>
+          <p className="mt-1">
+            Check HA_BASE_URL and HA_TOKEN, restart the server, then retry loading entities and services.
+          </p>
+          <div className="mt-3 flex flex-wrap gap-2">
+            <Button variant="secondary" onClick={onRetryEntities}>
+              Retry
+            </Button>
+            <Button variant="ghost" onClick={() => setHelpOpen(true)}>
+              Open token guide
+            </Button>
+          </div>
+        </div>
+      ) : null}
+
+      <div className="grid gap-5 xl:grid-cols-[1fr_360px]">
+        <Card>
+          <CardHeader>
+            <CardTitle>Permission composer</CardTitle>
+            <p className="text-sm text-[var(--muted)]">
+              Group access by Home Assistant domain, then choose services and entities.
+            </p>
+          </CardHeader>
+          <CardContent className="space-y-5">
+            <div className="space-y-2">
+              <label htmlFor="token-name" className="text-xs font-semibold uppercase text-[var(--muted)]">
+                Token name
+              </label>
+              <Input
+                id="token-name"
+                value={name}
+                onChange={(event) => setName(event.target.value)}
+                placeholder="Mom access"
+              />
+            </div>
+
+            <DomainPermissionEditor
+              groups={groups}
+              onChange={setGroups}
+              entities={entities}
+              services={services}
+              disabled={isSubmitting || isLoadingEntities || hasEntityError}
+            />
+          </CardContent>
+        </Card>
+
+        <AccessSummary
+          groups={groups}
+          canSubmit={canSubmit}
+          isSubmitting={isSubmitting}
+          submitLabel="Issue token"
+          onSubmit={() => onCreate({ name, permissions })}
+        />
+      </div>
+
+      {helpOpen ? (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/55 p-4 backdrop-blur-sm"
+          role="dialog"
+          aria-modal="true"
+          aria-label="Connect Home Assistant"
+          onClick={() => setHelpOpen(false)}
+        >
+          <div className="max-h-[90vh] w-full max-w-xl overflow-auto" onClick={(event) => event.stopPropagation()}>
+            <div className="mb-3 flex justify-end">
+              <Button variant="secondary" onClick={() => setHelpOpen(false)}>
+                Close
+              </Button>
+            </div>
+            <HomeAssistantTokenHelp />
+          </div>
+        </div>
+      ) : null}
+    </div>
+  );
+}

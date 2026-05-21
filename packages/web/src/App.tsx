@@ -1,16 +1,11 @@
 import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { api, type QuickSetupResult, type TokenPermission } from "./api";
-import { AuditTable } from "./components/AuditTable";
-import { ClientTable } from "./components/ClientTable";
+import { AppShell, type Tab } from "./components/AppShell";
 import { LoginCard } from "./components/LoginCard";
-import { QuickSetup } from "./components/QuickSetup";
-import { SectionHeader } from "./components/SectionHeader";
-import { Button } from "./components/ui/button";
-
-const tabs = ["Quick Start", "Tokens", "Activity"] as const;
-
-type Tab = (typeof tabs)[number];
+import { ActivityPage } from "./pages/ActivityPage";
+import { QuickStartPage } from "./pages/QuickStartPage";
+import { TokensPage } from "./pages/TokensPage";
 
 export default function App() {
   const queryClient = useQueryClient();
@@ -59,7 +54,11 @@ export default function App() {
 
   const logoutMutation = useMutation({
     mutationFn: () => api.logout(),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["me"] })
+    onSuccess: () => {
+      setQuickSetupResult(null);
+      setIssuedKey(null);
+      queryClient.invalidateQueries({ queryKey: ["me"] });
+    }
   });
 
   const quickSetupMutation = useMutation({
@@ -92,8 +91,7 @@ export default function App() {
     }: {
       clientId: string;
       permissions: TokenPermission[];
-    }) =>
-      api.updateClientPermissions(clientId, permissions),
+    }) => api.updateClientPermissions(clientId, permissions),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["clients"] });
     }
@@ -101,7 +99,7 @@ export default function App() {
 
   if (!authenticated) {
     return (
-      <div className="min-h-screen px-6 py-16">
+      <div className="min-h-screen bg-[var(--background)] px-6 py-16 text-[var(--foreground)]">
         <div className="mx-auto max-w-md">
           <LoginCard
             password={password}
@@ -115,89 +113,52 @@ export default function App() {
     );
   }
 
-  const issuedKeyBanner = issuedKey ? (
-    <div className="rounded-lg border border-emerald-400/40 bg-emerald-500/10 p-4 text-sm text-emerald-200">
-      New bearer token: <span className="font-mono">{issuedKey}</span>
-    </div>
-  ) : null;
+  const haStatus =
+    entitiesQuery.isError || servicesQuery.isError
+      ? "error"
+      : entitiesQuery.isLoading || servicesQuery.isLoading
+        ? "loading"
+        : "connected";
 
   return (
-    <div className="min-h-screen px-6 py-10">
-      <div className="mx-auto max-w-6xl space-y-8">
-        <header className="flex flex-wrap items-center justify-between gap-4">
-          <div>
-            <h1 className="text-3xl font-semibold text-slate-50">ha-gatekeeper</h1>
-            <p className="text-sm text-slate-400">Manage Home Assistant token permissions</p>
-          </div>
-          <Button variant="secondary" onClick={() => logoutMutation.mutate()}>
-            Log out
-          </Button>
-        </header>
+    <AppShell
+      activeTab={tab}
+      onTabChange={setTab}
+      onLogout={() => logoutMutation.mutate()}
+      haStatus={haStatus}
+    >
+      {tab === "Quick Start" ? (
+        <QuickStartPage
+          entities={entitiesQuery.data?.entities ?? []}
+          services={servicesQuery.data?.services ?? []}
+          isLoadingEntities={entitiesQuery.isLoading || servicesQuery.isLoading}
+          hasEntityError={entitiesQuery.isError || servicesQuery.isError}
+          onRetryEntities={() => {
+            entitiesQuery.refetch();
+            servicesQuery.refetch();
+          }}
+          onCreate={(payload) => quickSetupMutation.mutate(payload)}
+          result={quickSetupResult}
+          onClearResult={() => setQuickSetupResult(null)}
+          isSubmitting={quickSetupMutation.isPending}
+        />
+      ) : null}
 
-        <div className="flex flex-wrap gap-2">
-          {tabs.map((item) => (
-            <Button
-              key={item}
-              variant={tab === item ? "default" : "ghost"}
-              onClick={() => setTab(item)}
-            >
-              {item}
-            </Button>
-          ))}
-        </div>
+      {tab === "Tokens" ? (
+        <TokensPage
+          clients={clientsQuery.data?.clients ?? []}
+          entities={entitiesQuery.data?.entities ?? []}
+          services={servicesQuery.data?.services ?? []}
+          issuedKey={issuedKey}
+          onRotate={(clientId) => rotateKeyMutation.mutate(clientId)}
+          onDelete={(clientId) => deleteClientMutation.mutate(clientId)}
+          onSavePermissions={(clientId, permissions) =>
+            updatePermissionsMutation.mutate({ clientId, permissions })
+          }
+        />
+      ) : null}
 
-        {tab === "Quick Start" && (
-          <div className="space-y-6">
-            <SectionHeader
-              title="Quick Start"
-              subtitle="Create one token with only the controls and state reads it needs."
-            />
-            <QuickSetup
-              entities={entitiesQuery.data?.entities ?? []}
-              services={servicesQuery.data?.services ?? []}
-              isLoadingEntities={entitiesQuery.isLoading || servicesQuery.isLoading}
-              hasEntityError={entitiesQuery.isError || servicesQuery.isError}
-              onRetryEntities={() => {
-                entitiesQuery.refetch();
-                servicesQuery.refetch();
-              }}
-              onCreate={(payload) => quickSetupMutation.mutate(payload)}
-              result={quickSetupResult}
-              isSubmitting={quickSetupMutation.isPending}
-            />
-          </div>
-        )}
-
-        {tab === "Tokens" && (
-          <div className="space-y-6">
-            <SectionHeader
-              title="Tokens"
-              subtitle="Edit token permissions, rotate keys, or remove access."
-            />
-            {issuedKeyBanner}
-            <ClientTable
-              clients={clientsQuery.data?.clients ?? []}
-              entities={entitiesQuery.data?.entities ?? []}
-              services={servicesQuery.data?.services ?? []}
-              onRotate={(clientId) => rotateKeyMutation.mutate(clientId)}
-              onDelete={(clientId) => deleteClientMutation.mutate(clientId)}
-              onSavePermissions={(clientId, permissions) =>
-                updatePermissionsMutation.mutate({ clientId, permissions })
-              }
-            />
-          </div>
-        )}
-
-        {tab === "Activity" && (
-          <div className="space-y-6">
-            <SectionHeader
-              title="Activity"
-              subtitle="Review recent allowed and denied service and state requests."
-            />
-            <AuditTable logs={auditQuery.data?.logs ?? []} />
-          </div>
-        )}
-      </div>
-    </div>
+      {tab === "Activity" ? <ActivityPage logs={auditQuery.data?.logs ?? []} /> : null}
+    </AppShell>
   );
 }

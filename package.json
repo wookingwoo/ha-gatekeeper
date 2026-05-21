@@ -7,12 +7,15 @@
   ],
   "scripts": {
     "dev": "concurrently \"npm:dev -w packages/server\" \"npm:dev -w packages/web\"",
+    "e2e": "playwright test",
+    "e2e:ui": "playwright test --ui",
     "build": "npm run build -w packages/web && npm run build -w packages/server",
     "start": "npm run start -w packages/server",
     "prisma:migrate": "npm run prisma:migrate -w packages/server",
     "prisma:generate": "npm run prisma:generate -w packages/server"
   },
   "devDependencies": {
+    "@playwright/test": "^1.60.0",
     "concurrently": "^8.2.2"
   }
 }
