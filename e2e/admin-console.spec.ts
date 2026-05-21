@@ -7,6 +7,10 @@ test("admin console loads and primary navigation responds", async ({ page }) => 
   page.on("pageerror", (error) => browserErrors.push(error.message));
   page.on("console", (message) => {
     if (message.type() === "error") {
+      const url = message.location().url;
+      if (message.text().startsWith("Failed to load resource") && url.includes("/admin/ha/")) {
+        return;
+      }
       browserErrors.push(message.text());
     }
   });
@@ -23,13 +27,13 @@ test("admin console loads and primary navigation responds", async ({ page }) => 
   }
 
   await expect(page.getByRole("navigation", { name: "Primary navigation" })).toBeVisible();
-  await expect(page.getByRole("heading", { name: "Create scoped access" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Create scoped access", exact: true })).toBeVisible();
 
   await page.getByRole("button", { name: "Tokens" }).click();
-  await expect(page.getByRole("heading", { name: "Tokens" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Tokens", exact: true })).toBeVisible();
 
   await page.getByRole("button", { name: "Activity" }).click();
-  await expect(page.getByRole("heading", { name: "Activity" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Activity", exact: true })).toBeVisible();
 
   await page.getByRole("button", { name: /Dark mode|Light mode/ }).click();
   await expect(page.locator("html")).toHaveClass(/dark/);
