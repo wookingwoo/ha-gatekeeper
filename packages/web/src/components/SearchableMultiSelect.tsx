@@ -89,7 +89,7 @@ export function SearchableMultiSelect({
   }, [open]);
 
   const triggerBase =
-    "h-10 w-full rounded-md border border-slate-700 bg-slate-900 px-3 text-left text-sm text-slate-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400 disabled:cursor-not-allowed disabled:opacity-60";
+    "h-10 w-full rounded-md border border-[var(--border)] bg-[var(--surface)] px-3 text-left text-sm text-[var(--foreground)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--primary)] disabled:cursor-not-allowed disabled:opacity-60";
 
   return (
     <div className={cn("relative", className)}>
@@ -102,10 +102,10 @@ export function SearchableMultiSelect({
         aria-haspopup="listbox"
         aria-expanded={open}
       >
-        <span className={cn("block truncate", values.length === 0 && "text-slate-500")}>
+        <span className={cn("block truncate", values.length === 0 && "text-[var(--muted)]")}>
           {triggerText}
         </span>
-        <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-xs text-slate-500">
+        <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-xs text-[var(--muted)]">
           v
         </span>
       </button>
@@ -113,9 +113,9 @@ export function SearchableMultiSelect({
       {open ? (
         <div
           ref={panelRef}
-          className="absolute z-50 mt-2 w-full rounded-md border border-slate-800 bg-slate-950/95 shadow-xl"
+          className="absolute z-50 mt-2 w-full rounded-md border border-[var(--border)] bg-[var(--surface)] shadow-xl"
         >
-          <div className="border-b border-slate-800 p-2">
+          <div className="border-b border-[var(--border)] p-2">
             <Input
               autoFocus
               value={query}
@@ -123,11 +123,11 @@ export function SearchableMultiSelect({
               placeholder={searchPlaceholder}
             />
           </div>
-          <div className="flex items-center justify-between px-3 py-2 text-xs text-slate-500">
+          <div className="flex items-center justify-between px-3 py-2 text-xs text-[var(--muted)]">
             <span>{values.length} selected</span>
             <button
               type="button"
-              className="text-emerald-300 hover:text-emerald-200"
+              className="text-[var(--primary)] hover:underline"
               onClick={() => onValuesChange([])}
               disabled={values.length === 0}
             >
@@ -136,7 +136,7 @@ export function SearchableMultiSelect({
           </div>
           <div className="max-h-64 overflow-auto p-1 text-sm">
             {filtered.length === 0 ? (
-              <div className="px-3 py-2 text-xs text-slate-500">{emptyText}</div>
+              <div className="px-3 py-2 text-xs text-[var(--muted)]">{emptyText}</div>
             ) : (
               filtered.map((option) => {
                 const selected = valueSet.has(option.value);
@@ -145,8 +145,8 @@ export function SearchableMultiSelect({
                     key={option.value}
                     type="button"
                     className={cn(
-                      "flex w-full items-start gap-3 rounded-md px-3 py-2 text-left text-slate-200 hover:bg-slate-900/70",
-                      selected && "bg-slate-900/70 text-emerald-200"
+                      "flex w-full items-start gap-3 rounded-md px-3 py-2 text-left text-[var(--foreground)] hover:bg-[var(--surface-muted)]",
+                      selected && "bg-[var(--primary-soft)] text-[var(--primary)]"
                     )}
                     onClick={() => {
                       const next = selected
@@ -157,8 +157,8 @@ export function SearchableMultiSelect({
                   >
                     <span
                       className={cn(
-                        "mt-0.5 flex h-4 w-4 items-center justify-center rounded border border-slate-600 text-[10px]",
-                        selected && "border-emerald-400 bg-emerald-500/20 text-emerald-200"
+                        "mt-0.5 flex h-4 w-4 items-center justify-center rounded border border-[var(--border)] text-[10px]",
+                        selected && "border-[var(--primary-border)] bg-[var(--primary-soft)] text-[var(--primary)]"
                       )}
                     >
                       {selected ? "v" : ""}
@@ -166,7 +166,7 @@ export function SearchableMultiSelect({
                     <span className="flex flex-col">
                       <span>{option.label}</span>
                       {option.description ? (
-                        <span className="text-xs text-slate-500">{option.description}</span>
+                        <span className="text-xs text-[var(--muted)]">{option.description}</span>
                       ) : null}
                     </span>
                   </button>

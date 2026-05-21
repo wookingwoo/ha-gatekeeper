@@ -5,14 +5,53 @@
 @tailwind utilities;
 
 :root {
+  color-scheme: light;
+  --background: #f8fafc;
+  --foreground: #0f172a;
+  --surface: #ffffff;
+  --surface-muted: #f1f5f9;
+  --surface-strong: #e2e8f0;
+  --border: #e2e8f0;
+  --muted: #64748b;
+  --primary: #0f766e;
+  --primary-hover: #0d9488;
+  --primary-soft: #ecfdf5;
+  --primary-border: #bbf7d0;
+  --primary-foreground: #ffffff;
+  --danger: #dc2626;
+  --danger-soft: #fee2e2;
+  --danger-border: #fecaca;
+  --warning: #b45309;
+  --warning-soft: #fffbeb;
+  --warning-border: #fde68a;
+}
+
+.dark {
   color-scheme: dark;
+  --background: #0b1120;
+  --foreground: #e5edf7;
+  --surface: #111827;
+  --surface-muted: #1f2937;
+  --surface-strong: #263244;
+  --border: #263244;
+  --muted: #94a3b8;
+  --primary: #2dd4bf;
+  --primary-hover: #5eead4;
+  --primary-soft: #0f2f2d;
+  --primary-border: #115e59;
+  --primary-foreground: #042f2e;
+  --danger: #f87171;
+  --danger-soft: #3f1d1d;
+  --danger-border: #7f1d1d;
+  --warning: #fbbf24;
+  --warning-soft: #3a2a0a;
+  --warning-border: #854d0e;
 }
 
 body {
   font-family: "IBM Plex Sans", ui-sans-serif, system-ui;
-  background: radial-gradient(circle at top, rgba(15, 118, 110, 0.35), transparent 55%),
-    radial-gradient(circle at 20% 20%, rgba(255, 107, 53, 0.35), transparent 50%),
-    #0b1120;
+  background: var(--background);
+  color: var(--foreground);
 }
 
 h1, h2, h3 {
@@ -20,7 +59,6 @@ h1, h2, h3 {
 }
 
 .glass {
-  background: rgba(15, 23, 42, 0.75);
-  border: 1px solid rgba(148, 163, 184, 0.2);
-  backdrop-filter: blur(18px);
+  background: var(--surface);
+  border: 1px solid var(--border);
 }
