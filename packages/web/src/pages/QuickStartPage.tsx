@@ -6,6 +6,7 @@ import { HomeAssistantTokenHelp } from "../components/HomeAssistantTokenHelp";
 import { Button } from "../components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "../components/ui/card";
 import { Input } from "../components/ui/input";
+import { downloadAgentBundle, getDefaultGatekeeperBaseUrl } from "../lib/agentBundle";
 import { createDefaultGroups, groupsAreComplete, groupsToPermissions } from "../lib/permissionGroups";
 
 function makeCurl(permissions: TokenPermission[]): string {
@@ -60,6 +61,8 @@ export function QuickStartPage({
   const [name, setName] = useState("Mom access");
   const [groups, setGroups] = useState(createDefaultGroups);
   const [helpOpen, setHelpOpen] = useState(false);
+  const [includeBearerTokenInBundle, setIncludeBearerTokenInBundle] = useState(false);
+  const [bundleError, setBundleError] = useState<string | null>(null);
 
   const permissions = useMemo(() => groupsToPermissions(groups), [groups]);
   const canSubmit =
@@ -71,6 +74,26 @@ export function QuickStartPage({
 
   if (result) {
     const curl = makeCurl(result.client.permissions);
+    const handleDownloadBundle = () => {
+      setBundleError(null);
+      try {
+        downloadAgentBundle({
+          clientName: result.client.name,
+          baseUrl: getDefaultGatekeeperBaseUrl(),
+          permissions: result.client.permissions,
+          tokenMode: includeBearerTokenInBundle ? "included" : "placeholder",
+          liveToken: includeBearerTokenInBundle ? result.apiKey : undefined
+        });
+      } catch (error) {
+        setBundleError(error instanceof Error ? error.message : String(error));
+      }
+    };
+    const handleCreateAnotherToken = () => {
+      setIncludeBearerTokenInBundle(false);
+      setBundleError(null);
+      onClearResult();
+    };
+
     return (
       <div className="space-y-6">
         <section>
@@ -99,9 +122,52 @@ export function QuickStartPage({
                   Copy curl
                 </Button>
               ) : null}
-              <Button variant="ghost" onClick={onClearResult}>
+              <Button variant="ghost" onClick={handleCreateAnotherToken}>
                 Create another token
               </Button>
+            </div>
+
+            <div className="space-y-3 rounded-md border border-[var(--border)] bg-[var(--surface-muted)] p-4">
+              <div className="space-y-1">
+                <h3 className="text-sm font-semibold text-[var(--foreground)]">Agent setup bundle</h3>
+                <p className="text-sm text-[var(--muted)]">
+                  Downloads instructions, OpenAPI metadata, OpenClaw skill notes, and curl examples
+                  for this scoped token.
+                </p>
+              </div>
+
+              <Button variant="secondary" onClick={handleDownloadBundle}>
+                Download agent setup bundle
+              </Button>
+
+              <label className="flex items-start gap-3 text-sm text-[var(--foreground)]">
+                <input
+                  type="checkbox"
+                  checked={includeBearerTokenInBundle}
+                  onChange={(event) => setIncludeBearerTokenInBundle(event.target.checked)}
+                  className="mt-1"
+                />
+                <span>
+                  Include bearer token in bundle
+                  <span className="block text-xs text-[var(--muted)]">
+                    Unchecked generates placeholder-only bundle.
+                  </span>
+                </span>
+              </label>
+
+              {includeBearerTokenInBundle ? (
+                <p className="rounded-md border border-[var(--danger-border)] bg-[var(--danger-soft)] p-3 text-sm text-[var(--danger)]">
+                  This bundle contains a live bearer token. Anyone with the zip can use the allowed
+                  gateway actions until the token is rotated, disabled, or deleted.
+                </p>
+              ) : null}
+
+              {bundleError ? (
+                <p className="text-sm text-[var(--danger)]">
+                  Could not create the bundle. Try the download again while this token is still
+                  visible.
+                </p>
+              ) : null}
             </div>
           </CardContent>
         </Card>
