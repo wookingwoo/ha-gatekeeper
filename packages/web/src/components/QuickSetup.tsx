@@ -117,8 +117,8 @@ export function QuickSetup({
             <div className="rounded-md border border-rose-400/40 bg-rose-500/10 p-4 text-sm text-rose-100">
               <p className="font-medium">Cannot load entities</p>
               <p className="mt-1 text-rose-200/80">
-                Check HA_BASE_URL and HA_TOKEN. If HA_TOKEN is missing, use the Home Assistant
-                token guide on this page, restart the server, then retry.
+                Check HA_BASE_URL and HA_TOKEN. If HA_TOKEN is missing or invalid, use the Home
+                Assistant token guide on this page, restart the server, then retry.
               </p>
               <Button className="mt-3" variant="secondary" onClick={onRetryEntities}>
                 Retry
@@ -159,7 +159,7 @@ export function QuickSetup({
             </div>
           </CardContent>
         </Card>
-        <HomeAssistantTokenHelp />
+        {hasEntityError ? <HomeAssistantTokenHelp /> : null}
       </div>
     </div>
   );
