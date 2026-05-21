@@ -134,7 +134,10 @@ test("generates placeholder bundle files in the exact path order", () => {
     "ha-gatekeeper-agent-bundle/.env.example",
     "ha-gatekeeper-agent-bundle/openclaw-skill/SKILL.md",
     "ha-gatekeeper-agent-bundle/examples/call-service.sh",
-    "ha-gatekeeper-agent-bundle/examples/read-state.sh"
+    "ha-gatekeeper-agent-bundle/examples/read-state.sh",
+    "ha-gatekeeper-agent-bundle/mcp/README.md",
+    "ha-gatekeeper-agent-bundle/mcp/mcp-config.example.json",
+    "ha-gatekeeper-agent-bundle/mcp/env.example"
   ]);
 
   const usage = files[0].content;
@@ -148,6 +151,56 @@ test("generates placeholder bundle files in the exact path order", () => {
     files.find((file) => file.path.endsWith("/.env.example"))?.content,
     `GATEKEEPER_BASE_URL=https://gatekeeper.example.test\nGATEKEEPER_TOKEN=${TOKEN_PLACEHOLDER}\n`
   );
+});
+
+test("generates MCP setup files with placeholder token by default", () => {
+  const files = buildAgentBundleFiles({
+    clientName: "MCP Placeholder Agent",
+    baseUrl: "https://gatekeeper.example.test",
+    permissions: samplePermissions,
+    tokenMode: "placeholder",
+    liveToken: "gk_live_should_not_be_included",
+    generatedAt: "2026-05-22T12:00:00.000Z"
+  });
+
+  const mcpReadme = files.find((file) => file.path.endsWith("/mcp/README.md"))?.content ?? "";
+  const mcpConfig = files.find((file) => file.path.endsWith("/mcp/mcp-config.example.json"))?.content ?? "";
+  const mcpEnv = files.find((file) => file.path.endsWith("/mcp/env.example"))?.content ?? "";
+  const parsedMcpConfig = JSON.parse(mcpConfig);
+  const allContent = files.map((file) => file.content).join("\n");
+
+  assert.match(mcpReadme, /npm run build:mcp/);
+  assert.match(mcpReadme, /<PATH_TO_HA_GATEKEEPER>/);
+  assert.equal(parsedMcpConfig.mcpServers["ha-gatekeeper"].command, "node");
+  assert.deepEqual(parsedMcpConfig.mcpServers["ha-gatekeeper"].args, [
+    "<PATH_TO_HA_GATEKEEPER>/packages/mcp/dist/index.js"
+  ]);
+  assert.match(mcpEnv, /GATEKEEPER_TOKEN=<GATEKEEPER_TOKEN>/);
+  assert.doesNotMatch(allContent, /gk_live_should_not_be_included/);
+});
+
+test("MCP setup files honor live-token bundle opt-in", () => {
+  const files = buildAgentBundleFiles({
+    clientName: "MCP Live Agent",
+    baseUrl: "https://gatekeeper.example.test",
+    permissions: samplePermissions,
+    tokenMode: "included",
+    liveToken: "gk_live_secret",
+    generatedAt: "2026-05-22T12:00:00.000Z"
+  });
+
+  const mcpConfig = files.find((file) => file.path.endsWith("/mcp/mcp-config.example.json"))?.content ?? "";
+  const mcpEnv = files.find((file) => file.path.endsWith("/mcp/env.example"))?.content ?? "";
+  const parsedMcpConfig = JSON.parse(mcpConfig);
+
+  assert.match(mcpEnv, /GATEKEEPER_TOKEN=gk_live_secret/);
+  assert.match(mcpConfig, /gk_live_secret/);
+  assert.equal(parsedMcpConfig.mcpServers["ha-gatekeeper"].command, "node");
+  assert.deepEqual(parsedMcpConfig.mcpServers["ha-gatekeeper"].args, [
+    "<PATH_TO_HA_GATEKEEPER>/packages/mcp/dist/index.js"
+  ]);
+  assert.doesNotMatch(mcpEnv, /HA_TOKEN/);
+  assert.doesNotMatch(mcpConfig, /HA_TOKEN/);
 });
 
 test("includes a live Gatekeeper token only when explicitly requested", () => {
