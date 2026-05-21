@@ -5,6 +5,7 @@ import { Badge } from "../components/ui/badge";
 import { Button } from "../components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "../components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "../components/ui/table";
+import { downloadAgentBundle, getDefaultGatekeeperBaseUrl } from "../lib/agentBundle";
 import {
   buildAccessSummary,
   groupsAreComplete,
@@ -45,6 +46,22 @@ export function TokensPage({
 }) {
   const [editingClientId, setEditingClientId] = useState<string | null>(null);
   const [draftGroups, setDraftGroups] = useState<PermissionGroup[]>([]);
+  const [bundleErrorClientId, setBundleErrorClientId] = useState<string | null>(null);
+
+  function handleDownloadBundle(client: Client): void {
+    setBundleErrorClientId(null);
+
+    try {
+      downloadAgentBundle({
+        clientName: client.name,
+        baseUrl: getDefaultGatekeeperBaseUrl(),
+        permissions: client.permissions,
+        tokenMode: "placeholder"
+      });
+    } catch (error) {
+      setBundleErrorClientId(client.id);
+    }
+  }
 
   return (
     <div className="space-y-6">
@@ -105,6 +122,14 @@ export function TokensPage({
                         <Button
                           size="sm"
                           variant="secondary"
+                          aria-label={`Download bundle for ${client.name}`}
+                          onClick={() => handleDownloadBundle(client)}
+                        >
+                          Download bundle
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="secondary"
                           onClick={() => {
                             setEditingClientId(client.id);
                             setDraftGroups(permissionsToGroups(client.permissions));
@@ -127,6 +152,11 @@ export function TokensPage({
                           Delete
                         </Button>
                       </div>
+                      {bundleErrorClientId === client.id ? (
+                        <p className="mt-2 text-xs text-[var(--danger)]">
+                          Could not create the placeholder bundle. Try again from this token row.
+                        </p>
+                      ) : null}
                     </TableCell>
                   </TableRow>
                   {editingClientId === client.id ? (
