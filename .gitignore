@@ -7,6 +7,8 @@ packages/server/prisma/dev.db
 packages/server/prisma/dev.db-journal
 packages/server/prisma/prisma/dev.db
 packages/server/prisma/prisma/dev.db-journal
+test-results/
+playwright-report/
 
 .env
 .env.*
