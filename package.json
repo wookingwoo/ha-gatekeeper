@@ -3,13 +3,16 @@
   "private": true,
   "workspaces": [
     "packages/server",
-    "packages/web"
+    "packages/web",
+    "packages/mcp"
   ],
   "scripts": {
     "dev": "concurrently \"npm:dev -w packages/server\" \"npm:dev -w packages/web\"",
     "e2e": "playwright test",
     "e2e:ui": "playwright test --ui",
-    "build": "npm run build -w packages/web && npm run build -w packages/server",
+    "build": "npm run build -w packages/web && npm run build -w packages/server && npm run build -w packages/mcp",
+    "build:mcp": "npm run build -w packages/mcp",
+    "test:mcp": "npm run test -w packages/mcp",
     "start": "npm run start -w packages/server",
     "prisma:migrate": "npm run prisma:migrate -w packages/server",
     "prisma:generate": "npm run prisma:generate -w packages/server"
