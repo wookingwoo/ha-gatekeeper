@@ -81,9 +81,14 @@ function findUnsupportedTargetSelector(value: unknown): string | undefined {
     return undefined;
   }
 
-  return ["area_id", "device_id", "floor_id", "label_id"].find((selector) =>
+  const directSelector = ["area_id", "device_id", "floor_id", "label_id"].find((selector) =>
     Object.prototype.hasOwnProperty.call(value, selector),
   );
+  if (directSelector) {
+    return directSelector;
+  }
+
+  return findUnsupportedTargetSelector(value.target);
 }
 
 function formatCapabilities(capabilities: unknown): string {

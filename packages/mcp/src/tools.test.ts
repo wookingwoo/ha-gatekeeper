@@ -94,6 +94,37 @@ test("ha_call_service rejects top-level unsupported target selectors before HTTP
   assert.match(result.content[0]?.text ?? "", /area_id/);
 });
 
+test("ha_call_service rejects nested target selectors before HTTP", async () => {
+  let calls = 0;
+  const handlers = createToolHandlers({
+    async listCapabilities() {
+      return {};
+    },
+    async callService() {
+      calls += 1;
+      return {};
+    },
+    async readState() {
+      return {};
+    },
+  });
+
+  const result = await handlers.ha_call_service({
+    domain: "light",
+    service: "turn_on",
+    data: {
+      target: {
+        area_id: "kitchen",
+      },
+    },
+  });
+
+  assert.equal(calls, 0);
+  assert.equal(result.isError, true);
+  assert.match(result.content[0]?.text ?? "", /Unsupported target selector/);
+  assert.match(result.content[0]?.text ?? "", /area_id/);
+});
+
 test("ha_call_service forwards service calls to client", async () => {
   let captured: ServiceCallInput | undefined;
   const handlers = createToolHandlers({
