@@ -143,6 +143,41 @@ curl http://localhost:8080/api/states/binary_sensor.window \
 
 Gatekeeper only allows requests that match an active token permission. Service calls must match the requested domain, service, and entity allowlist. State reads must match an explicitly allowed entity. Requests using unsupported service targets such as `area_id`, `device_id`, `floor_id`, or `label_id`, missing entity IDs, or entities outside the token allowlist are rejected before reaching Home Assistant. Entity-less service calls must be explicitly enabled in the token permission.
 
+## MCP Adapter
+
+ha-gatekeeper includes a local stdio MCP adapter for agents that support the Model Context Protocol. The adapter does not use the Home Assistant long-lived token; it only needs a scoped Gatekeeper token.
+
+Local setup:
+
+1. `npm install`
+2. `npm run build:mcp`
+3. Use an MCP config pointing to `<PATH_TO_HA_GATEKEEPER>/packages/mcp/dist/index.js`
+
+Example MCP config:
+
+```json
+{
+  "mcpServers": {
+    "ha-gatekeeper": {
+      "command": "node",
+      "args": ["<PATH_TO_HA_GATEKEEPER>/packages/mcp/dist/index.js"],
+      "env": {
+        "GATEKEEPER_BASE_URL": "http://localhost:8080",
+        "GATEKEEPER_TOKEN": "<GATEKEEPER_CLIENT_KEY>"
+      }
+    }
+  }
+}
+```
+
+Available tools:
+
+- `ha_list_capabilities`
+- `ha_call_service`
+- `ha_read_state`
+
+Gatekeeper still enforces all token permissions for MCP calls.
+
 ## Admin API
 
 - `POST /admin/login`
