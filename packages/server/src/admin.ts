@@ -13,18 +13,28 @@ import {
 import { parsePermission } from "./permissions.js";
 import { createTokenAccess, replaceTokenPermissions } from "./tokenAccess.js";
 import { generateApiKey } from "./security.js";
+import { isAdminAuthenticated, isAdminLoginAllowed } from "./adminAuth.js";
 
 function sendUnauthorized(reply: FastifyReply) {
   return reply.status(401).send({ ok: false, error: "unauthorized" });
 }
 
 function ensureAdmin(request: FastifyRequest, reply: FastifyReply) {
-  const isAuthed = request.session.get("admin") === true;
+  const isAuthed = getAdminAuthenticated(request);
   if (!isAuthed) {
     sendUnauthorized(reply);
     return false;
   }
   return true;
+}
+
+function getAdminAuthenticated(request: FastifyRequest): boolean {
+  return isAdminAuthenticated({
+    addonMode: env.HA_GATEKEEPER_ADDON,
+    sessionAdmin: request.session.get("admin") === true,
+    ip: request.ip,
+    headers: request.headers
+  });
 }
 
 function normalizePermission(permission: any) {
@@ -49,6 +59,21 @@ export const adminRoutes: FastifyPluginAsync = async (app) => {
     null;
 
   app.post("/login", async (request, reply) => {
+    const loginAllowed = isAdminLoginAllowed({
+      addonMode: env.HA_GATEKEEPER_ADDON,
+      sessionAdmin: request.session.get("admin") === true,
+      ip: request.ip,
+      headers: request.headers
+    });
+    if (!loginAllowed) {
+      return sendUnauthorized(reply);
+    }
+
+    if (env.HA_GATEKEEPER_ADDON) {
+      request.session.set("admin", true);
+      return reply.send({ ok: true });
+    }
+
     const parsed = loginSchema.safeParse(request.body ?? {});
     if (!parsed.success) {
       return reply.status(400).send({ ok: false, error: "invalid_body" });
@@ -68,7 +93,8 @@ export const adminRoutes: FastifyPluginAsync = async (app) => {
   });
 
   app.get("/me", async (request) => ({
-    authenticated: request.session.get("admin") === true
+    authenticated: getAdminAuthenticated(request),
+    addonMode: env.HA_GATEKEEPER_ADDON
   }));
 
   app.get("/ha/services", async (request, reply) => {

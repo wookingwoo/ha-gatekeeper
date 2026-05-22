@@ -1,0 +1,28 @@
+name: HA Gatekeeper
+version: "0.1.0"
+slug: ha_gatekeeper
+description: Scoped, audited Gatekeeper tokens for Home Assistant service access.
+url: https://github.com/wookingwoo/ha-gatekeeper
+image: ghcr.io/wookingwoo/ha-gatekeeper
+arch:
+  - aarch64
+  - amd64
+startup: application
+boot: auto
+stage: experimental
+init: false
+ingress: true
+ingress_port: 8080
+panel_icon: mdi:shield-key
+panel_title: HA Gatekeeper
+homeassistant_api: true
+ports:
+  8080/tcp: null
+ports_description:
+  8080/tcp: Optional LAN agent API
+options:
+  expose_api: false
+  log_level: info
+schema:
+  expose_api: bool
+  log_level: "list(trace|debug|info|warn|error|fatal)"

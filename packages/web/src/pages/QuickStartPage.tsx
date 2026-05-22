@@ -62,6 +62,7 @@ export function QuickStartPage({
   const [groups, setGroups] = useState(createDefaultGroups);
   const [helpOpen, setHelpOpen] = useState(false);
   const [includeBearerTokenInBundle, setIncludeBearerTokenInBundle] = useState(false);
+  const [bundleBaseUrl, setBundleBaseUrl] = useState(() => getDefaultGatekeeperBaseUrl());
   const [bundleError, setBundleError] = useState<string | null>(null);
 
   const permissions = useMemo(() => groupsToPermissions(groups), [groups]);
@@ -79,7 +80,7 @@ export function QuickStartPage({
       try {
         downloadAgentBundle({
           clientName: result.client.name,
-          baseUrl: getDefaultGatekeeperBaseUrl(),
+          baseUrl: bundleBaseUrl.trim(),
           permissions: result.client.permissions,
           tokenMode: includeBearerTokenInBundle ? "included" : "placeholder",
           liveToken: includeBearerTokenInBundle ? result.apiKey : undefined
@@ -134,6 +135,21 @@ export function QuickStartPage({
                   Downloads instructions, OpenAPI metadata, OpenClaw skill notes, and curl examples
                   for this scoped token.
                 </p>
+              </div>
+
+              <div className="space-y-2">
+                <label
+                  htmlFor="quickstart-bundle-base-url"
+                  className="text-xs font-semibold uppercase text-[var(--muted)]"
+                >
+                  Gatekeeper API base URL
+                </label>
+                <Input
+                  id="quickstart-bundle-base-url"
+                  value={bundleBaseUrl}
+                  onChange={(event) => setBundleBaseUrl(event.target.value)}
+                  placeholder="http://homeassistant.local:8080"
+                />
               </div>
 
               <Button variant="secondary" onClick={handleDownloadBundle}>

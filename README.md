@@ -19,6 +19,20 @@ A single-container API gateway for Home Assistant that issues limited, audited b
 
 Placeholder image. Replace this file with a real screenshot when ready.
 
+## Home Assistant Add-on
+
+HA Gatekeeper can be installed as a custom Home Assistant add-on by adding this repository URL to the Home Assistant add-on store:
+
+```text
+https://github.com/wookingwoo/ha-gatekeeper
+```
+
+The add-on uses Home Assistant Ingress for the admin UI and the Supervisor API proxy for Home Assistant access, so add-on installs do not require a Home Assistant long-lived access token.
+
+The public Gatekeeper API port is disabled by default. To allow trusted LAN agents to call it directly, enable the `expose_api` add-on option, map container port `8080/tcp` in the Home Assistant **Network** section, and use a generated Gatekeeper bearer token.
+
+Add-on releases use prebuilt GHCR images at `ghcr.io/wookingwoo/ha-gatekeeper`, tagged by add-on version.
+
 ## Local Development
 
 1. Install dependencies.

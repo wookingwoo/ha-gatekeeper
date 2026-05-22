@@ -28,6 +28,8 @@ export type AgentBundleFile = ZipSourceFile;
 const BUNDLE_ROOT = "ha-gatekeeper-agent-bundle";
 const UNSUPPORTED_TARGETS = ["area_id", "device_id", "floor_id", "label_id"];
 const VITE_PORTS = new Set(["5173", "5174", "5175"]);
+type GatekeeperLocationLike = Pick<Location, "protocol" | "hostname" | "port" | "origin"> &
+  Partial<Pick<Location, "pathname">>;
 
 export function projectAgentCapabilities(permissions: TokenPermission[]): AgentCapabilities {
   const serviceActionsByKey = new Map<
@@ -83,14 +85,22 @@ export function projectAgentCapabilities(permissions: TokenPermission[]): AgentC
 }
 
 export function getDefaultGatekeeperBaseUrl(
-  locationLike: Pick<Location, "protocol" | "hostname" | "port" | "origin"> = window.location
+  locationLike: GatekeeperLocationLike = window.location
 ): string {
+  if (isAddonIngressPath(locationLike.pathname)) {
+    return `${locationLike.protocol}//${locationLike.hostname}:8080`;
+  }
+
   const isLocalHost = locationLike.hostname === "localhost" || locationLike.hostname === "127.0.0.1";
   if (isLocalHost && VITE_PORTS.has(locationLike.port)) {
     return `${locationLike.protocol}//${locationLike.hostname}:8080`;
   }
 
   return locationLike.origin;
+}
+
+export function isAddonIngressPath(pathname: string | null | undefined): boolean {
+  return pathname?.startsWith("/api/hassio_ingress/") ?? false;
 }
 
 export function buildAgentBundleFiles(input: AgentBundleInput): AgentBundleFile[] {
