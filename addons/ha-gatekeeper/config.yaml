@@ -21,9 +21,7 @@ ports_description:
   8080/tcp: Optional LAN agent API
 options:
   expose_api: false
-  api_port: 8080
   log_level: info
 schema:
   expose_api: bool
-  api_port: port
   log_level: "list(trace|debug|info|warn|error|fatal)"

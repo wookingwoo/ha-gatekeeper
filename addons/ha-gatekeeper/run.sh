@@ -33,15 +33,7 @@ NODE
 mkdir -p /data
 
 expose_api="$(read_option expose_api false)"
-api_port="$(read_option api_port 8080)"
 log_level="$(read_option log_level info)"
-
-case "$api_port" in
-  "" | *[!0-9]*)
-    echo "Invalid api_port option: $api_port" >&2
-    exit 1
-    ;;
-esac
 
 secrets_exports="$(node /app/packages/server/dist/addonSecretsCli.js /data)"
 eval "$secrets_exports"

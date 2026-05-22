@@ -28,14 +28,7 @@ WORKDIR /app
 
 ENV NODE_ENV=production
 
-COPY --from=build /app/package.json /app/package-lock.json ./
-COPY --from=build /app/node_modules ./node_modules
-COPY --from=build /app/packages/server/package.json ./packages/server/package.json
-COPY --from=build /app/packages/server/dist ./packages/server/dist
-COPY --from=build /app/packages/server/prisma ./packages/server/prisma
-COPY --from=build /app/packages/web/package.json ./packages/web/package.json
-COPY --from=build /app/packages/web/dist ./packages/web/dist
-COPY --from=build /app/packages/mcp/package.json ./packages/mcp/package.json
+COPY --from=build /app /app
 COPY addons/ha-gatekeeper/run.sh /run.sh
 
 RUN sed -i 's/\r$//' /run.sh && chmod 755 /run.sh

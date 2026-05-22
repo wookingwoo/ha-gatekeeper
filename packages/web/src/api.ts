@@ -62,9 +62,22 @@ type ApiResponse<T> = {
   ok: boolean;
 } & T;
 
+export function resolveApiPath(path: string, pathname = getCurrentPathname()): string {
+  if (!path.startsWith("/")) {
+    return path;
+  }
+
+  if (!pathname || pathname === "/") {
+    return path;
+  }
+
+  const basePath = pathname.endsWith("/") ? pathname.slice(0, -1) : pathname;
+  return `${basePath}${path}`;
+}
+
 async function apiFetch<T>(path: string, options?: RequestInit): Promise<ApiResponse<T>> {
   const hasBody = options?.body !== undefined;
-  const res = await fetch(path, {
+  const res = await fetch(resolveApiPath(path), {
     credentials: "include",
     headers: {
       ...(hasBody ? { "Content-Type": "application/json" } : {}),
@@ -130,3 +143,11 @@ export const api = {
       domain ? `/admin/ha/entities?domain=${encodeURIComponent(domain)}` : "/admin/ha/entities"
     )
 };
+
+function getCurrentPathname(): string {
+  if (typeof window === "undefined") {
+    return "/";
+  }
+
+  return window.location.pathname || "/";
+}
