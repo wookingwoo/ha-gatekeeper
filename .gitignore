@@ -3,6 +3,7 @@ packages/server/node_modules
 packages/web/node_modules
 packages/server/dist
 packages/web/dist
+packages/mcp/dist
 packages/server/prisma/dev.db
 packages/server/prisma/dev.db-journal
 packages/server/prisma/prisma/dev.db

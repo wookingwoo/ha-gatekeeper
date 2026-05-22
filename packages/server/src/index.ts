@@ -24,6 +24,8 @@ import {
   timingSafeEqual
 } from "./security.js";
 import { adminRoutes } from "./admin.js";
+import { buildCapabilitiesResponse } from "./capabilities.js";
+import { resolvePublicApiClient } from "./publicAuth.js";
 
 const app = Fastify({ logger: true });
 
@@ -111,6 +113,36 @@ async function findClientByApiKey(apiKey: string) {
 
   return candidates.find((candidate: any) => timingSafeEqual(computedHash, candidate.apiKeyHash)) ?? null;
 }
+
+app.get("/api/capabilities", async (request, reply) => {
+  const authorization = Array.isArray(request.headers.authorization)
+    ? request.headers.authorization[0]
+    : request.headers.authorization;
+  const auth = await resolvePublicApiClient(authorization, findClientByApiKey);
+  const ip = request.ip ?? null;
+
+  if (!auth.ok) {
+    await logAudit({
+      clientId: auth.clientId,
+      permissionId: null,
+      actionIdRaw: "capabilities.read",
+      ip,
+      success: false,
+      error: auth.error
+    });
+    return reply.status(auth.status).send({ ok: false, error: auth.error });
+  }
+
+  await logAudit({
+    clientId: auth.client.id,
+    permissionId: null,
+    actionIdRaw: "capabilities.read",
+    ip,
+    success: true
+  });
+
+  return buildCapabilitiesResponse(auth.client);
+});
 
 app.post("/api/services/:domain/:service", async (request, reply) => {
   const { domain, service } = request.params as { domain: string; service: string };

@@ -122,6 +122,18 @@ export function buildAgentBundleFiles(input: AgentBundleInput): AgentBundleFile[
     {
       path: `${BUNDLE_ROOT}/examples/read-state.sh`,
       content: buildReadStateExample(input.baseUrl, capabilities.stateReads[0])
+    },
+    {
+      path: `${BUNDLE_ROOT}/mcp/README.md`,
+      content: buildMcpReadme(input)
+    },
+    {
+      path: `${BUNDLE_ROOT}/mcp/mcp-config.example.json`,
+      content: `${JSON.stringify(buildMcpConfig(input, token), null, 2)}\n`
+    },
+    {
+      path: `${BUNDLE_ROOT}/mcp/env.example`,
+      content: `GATEKEEPER_BASE_URL=${input.baseUrl}\nGATEKEEPER_TOKEN=${token}\n`
     }
   ];
 }
@@ -331,6 +343,60 @@ ${capabilities.unsupportedTargets.map((target) => `- ${target}`).join("\n")}
 Refuse unsupported actions, unsupported target selectors, and requests outside these permissions.
 Do not ask for, store, or expose the Home Assistant long-lived token.
 ${input.tokenMode === "included" && input.liveToken ? "This bundle contains a live Gatekeeper bearer token; treat it as a secret.\n" : ""}`;
+}
+
+function buildMcpReadme(input: AgentBundleInput): string {
+  return `# HA Gatekeeper MCP Setup
+
+Use ha-gatekeeper-mcp to connect MCP-compatible agents to HA Gatekeeper over stdio MCP.
+
+## Local build setup
+
+The npm package can later be published, but this bundle uses the local build path now:
+
+1. Clone or open the ha-gatekeeper repo.
+2. Run \`npm install\`.
+3. Run \`npm run build:mcp\`.
+4. Replace \`<PATH_TO_HA_GATEKEEPER>\` in \`mcp-config.example.json\` with the absolute repo path.
+
+## Server
+
+- Entry point: <PATH_TO_HA_GATEKEEPER>/packages/mcp/dist/index.js
+- Transport: stdio MCP
+- Gatekeeper base URL: ${input.baseUrl}
+
+## Environment variables
+
+- GATEKEEPER_BASE_URL: HA Gatekeeper base URL.
+- GATEKEEPER_TOKEN: Gatekeeper bearer token for this bundle.
+
+## Tools
+
+- ha_list_capabilities: list the service calls and state reads allowed by this token.
+- ha_call_service: call an allowed Home Assistant service through Gatekeeper.
+- ha_read_state: read an allowed Home Assistant entity state through Gatekeeper.
+
+## Security notes
+
+- The adapter only talks to HA Gatekeeper.
+- The adapter never needs the Home Assistant long-lived token.
+- Store any included Gatekeeper token as a secret.
+`;
+}
+
+function buildMcpConfig(input: AgentBundleInput, token: string): object {
+  return {
+    mcpServers: {
+      "ha-gatekeeper": {
+        command: "node",
+        args: ["<PATH_TO_HA_GATEKEEPER>/packages/mcp/dist/index.js"],
+        env: {
+          GATEKEEPER_BASE_URL: input.baseUrl,
+          GATEKEEPER_TOKEN: token
+        }
+      }
+    }
+  };
 }
 
 function buildCallServiceExample(baseUrl: string, action: AgentServiceAction | undefined): string {
