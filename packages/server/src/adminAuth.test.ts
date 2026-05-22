@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import {
   isAdminAuthenticated,
+  isAdminLoginAllowed,
   isPublicApiAllowed,
   isTrustedIngressRequest
 } from "./adminAuth.js";
@@ -102,6 +103,48 @@ test("addon admin authentication allows an existing session or trusted ingress",
       sessionAdmin: false,
       ip: "192.0.2.1",
       headers: { "x-remote-user-id": "user-id" }
+    }),
+    false
+  );
+});
+
+test("admin login is allowed for standalone mode, trusted ingress, or existing addon sessions", () => {
+  assert.equal(
+    isAdminLoginAllowed({
+      addonMode: false,
+      sessionAdmin: false,
+      ip: "192.0.2.1",
+      headers: {}
+    }),
+    true
+  );
+
+  assert.equal(
+    isAdminLoginAllowed({
+      addonMode: true,
+      sessionAdmin: false,
+      ip: "172.30.32.2",
+      headers: { "x-ingress-path": "/api/hassio_ingress/token" }
+    }),
+    true
+  );
+
+  assert.equal(
+    isAdminLoginAllowed({
+      addonMode: true,
+      sessionAdmin: true,
+      ip: "192.0.2.1",
+      headers: {}
+    }),
+    true
+  );
+
+  assert.equal(
+    isAdminLoginAllowed({
+      addonMode: true,
+      sessionAdmin: false,
+      ip: "192.0.2.1",
+      headers: { "x-ingress-path": "/api/hassio_ingress/token" }
     }),
     false
   );

@@ -42,6 +42,19 @@ export function isAdminAuthenticated(params: {
   );
 }
 
+export function isAdminLoginAllowed(params: {
+  addonMode: boolean;
+  sessionAdmin: boolean;
+  ip: string | null | undefined;
+  headers: HeaderMap;
+}): boolean {
+  if (!params.addonMode) {
+    return true;
+  }
+
+  return isAdminAuthenticated(params);
+}
+
 export function isPublicApiAllowed(params: { addonMode: boolean; exposeApi: boolean }): boolean {
   return !params.addonMode || params.exposeApi;
 }

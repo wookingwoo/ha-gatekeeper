@@ -45,6 +45,7 @@ To enable direct access for external LAN agents:
 1. In the add-on **Network** section, map container port `8080/tcp` to a host port.
 1. Restart the add-on.
 1. Create or select a Gatekeeper token in the admin UI.
+1. When downloading an agent setup bundle through Ingress, set **Gatekeeper API base URL** to the mapped LAN API URL, such as `http://homeassistant.local:8080`.
 1. Configure the agent to use the add-on host and mapped port with the generated Gatekeeper bearer token.
 
 Supported public API endpoints:

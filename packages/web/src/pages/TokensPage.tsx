@@ -4,6 +4,7 @@ import { DomainPermissionEditor } from "../components/DomainPermissionEditor";
 import { Badge } from "../components/ui/badge";
 import { Button } from "../components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "../components/ui/card";
+import { Input } from "../components/ui/input";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "../components/ui/table";
 import { downloadAgentBundle, getDefaultGatekeeperBaseUrl } from "../lib/agentBundle";
 import {
@@ -46,6 +47,7 @@ export function TokensPage({
 }) {
   const [editingClientId, setEditingClientId] = useState<string | null>(null);
   const [draftGroups, setDraftGroups] = useState<PermissionGroup[]>([]);
+  const [bundleBaseUrl, setBundleBaseUrl] = useState(() => getDefaultGatekeeperBaseUrl());
   const [bundleErrorClientId, setBundleErrorClientId] = useState<string | null>(null);
 
   function handleDownloadBundle(client: Client): void {
@@ -54,7 +56,7 @@ export function TokensPage({
     try {
       downloadAgentBundle({
         clientName: client.name,
-        baseUrl: getDefaultGatekeeperBaseUrl(),
+        baseUrl: bundleBaseUrl.trim(),
         permissions: client.permissions,
         tokenMode: "placeholder"
       });
@@ -83,6 +85,21 @@ export function TokensPage({
           <CardTitle>Issued tokens</CardTitle>
         </CardHeader>
         <CardContent>
+          <div className="mb-4 max-w-xl space-y-2">
+            <label
+              htmlFor="tokens-bundle-base-url"
+              className="text-xs font-semibold uppercase text-[var(--muted)]"
+            >
+              Gatekeeper API base URL
+            </label>
+            <Input
+              id="tokens-bundle-base-url"
+              value={bundleBaseUrl}
+              onChange={(event) => setBundleBaseUrl(event.target.value)}
+              placeholder="http://homeassistant.local:8080"
+            />
+          </div>
+
           <Table>
             <TableHeader>
               <TableRow>

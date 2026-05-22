@@ -8,6 +8,7 @@ import {
   buildAgentBundleZip,
   downloadAgentBundle,
   getDefaultGatekeeperBaseUrl,
+  isAddonIngressPath,
   projectAgentCapabilities
 } from "./agentBundle.js";
 import { createZip } from "./zip.js";
@@ -407,5 +408,36 @@ test("getDefaultGatekeeperBaseUrl maps local Vite origins and keeps production o
       origin: "https://gatekeeper.example.test"
     }),
     "https://gatekeeper.example.test"
+  );
+});
+
+test("isAddonIngressPath detects Home Assistant ingress paths", () => {
+  assert.equal(isAddonIngressPath("/api/hassio_ingress/abcdef"), true);
+  assert.equal(isAddonIngressPath("/api/hassio_ingress/abcdef/admin"), true);
+  assert.equal(isAddonIngressPath("/api/hassio_ingress"), false);
+  assert.equal(isAddonIngressPath("/admin"), false);
+});
+
+test("getDefaultGatekeeperBaseUrl suggests the mapped addon API URL for ingress", () => {
+  assert.equal(
+    getDefaultGatekeeperBaseUrl({
+      protocol: "http:",
+      hostname: "homeassistant.local",
+      port: "",
+      origin: "http://homeassistant.local",
+      pathname: "/api/hassio_ingress/abcdef"
+    }),
+    "http://homeassistant.local:8080"
+  );
+
+  assert.equal(
+    getDefaultGatekeeperBaseUrl({
+      protocol: "https:",
+      hostname: "ha.example.test",
+      port: "",
+      origin: "https://ha.example.test",
+      pathname: "/api/hassio_ingress/abcdef/admin"
+    }),
+    "https://ha.example.test:8080"
   );
 });
