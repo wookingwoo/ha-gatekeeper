@@ -17,12 +17,11 @@ RUN npm run build
 FROM node:20-bookworm-slim AS runtime
 
 ARG BUILD_VERSION=0.1.0
-ARG BUILD_ARCH=amd64
 
 LABEL \
   io.hass.version="${BUILD_VERSION}" \
-  io.hass.type="addon" \
-  io.hass.arch="${BUILD_ARCH}"
+  io.hass.type="app" \
+  io.hass.arch="aarch64|amd64"
 
 WORKDIR /app
 
