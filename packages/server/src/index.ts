@@ -26,6 +26,7 @@ import {
 import { adminRoutes } from "./admin.js";
 import { buildCapabilitiesResponse } from "./capabilities.js";
 import { resolvePublicApiClient } from "./publicAuth.js";
+import { isPublicApiAllowed } from "./adminAuth.js";
 
 const app = Fastify({ logger: true });
 
@@ -113,6 +114,18 @@ async function findClientByApiKey(apiKey: string) {
 
   return candidates.find((candidate: any) => timingSafeEqual(computedHash, candidate.apiKeyHash)) ?? null;
 }
+
+app.addHook("onRequest", async (request, reply) => {
+  if (!request.raw.url?.startsWith("/api/")) {
+    return;
+  }
+
+  if (isPublicApiAllowed({ addonMode: env.HA_GATEKEEPER_ADDON, exposeApi: env.ADDON_EXPOSE_API })) {
+    return;
+  }
+
+  return reply.status(403).send({ ok: false, error: "api_not_exposed" });
+});
 
 app.get("/api/capabilities", async (request, reply) => {
   const authorization = Array.isArray(request.headers.authorization)
