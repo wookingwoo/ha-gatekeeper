@@ -1,4 +1,5 @@
 import type { FastifyPluginAsync, FastifyReply, FastifyRequest } from "fastify";
+import rateLimit from "@fastify/rate-limit";
 import { prisma } from "./db.js";
 import { env } from "./env.js";
 import { fetchHaEntities, fetchHaServices } from "./ha.js";
@@ -12,8 +13,10 @@ import {
 } from "./schemas.js";
 import { parsePermission } from "./permissions.js";
 import { createTokenAccess, replaceTokenPermissions } from "./tokenAccess.js";
-import { generateApiKey } from "./security.js";
-import { isAdminAuthenticated, isAdminLoginAllowed } from "./adminAuth.js";
+import { generateApiKey, timingSafeEqual } from "./security.js";
+import { isAdminAuthenticated, isAdminLoginAllowed, isTrustedIngressRequest } from "./adminAuth.js";
+import { logAudit } from "./audit.js";
+import { rateLimitErrorResponseBuilder } from "./rateLimit.js";
 
 function sendUnauthorized(reply: FastifyReply) {
   return reply.status(401).send({ ok: false, error: "unauthorized" });
@@ -58,37 +61,102 @@ export const adminRoutes: FastifyPluginAsync = async (app) => {
   let haEntityCache: { data: Awaited<ReturnType<typeof fetchHaEntities>>; expiresAt: number } | null =
     null;
 
-  app.post("/login", async (request, reply) => {
-    const loginAllowed = isAdminLoginAllowed({
-      addonMode: env.HA_GATEKEEPER_ADDON,
-      sessionAdmin: request.session.get("admin") === true,
-      ip: request.ip,
-      headers: request.headers
-    });
-    if (!loginAllowed) {
-      return sendUnauthorized(reply);
-    }
+  // Scoped to this plugin (not global) so only routes that opt in via `config.rateLimit`
+  // are limited. Trusted-ingress requests are allow-listed: in add-on mode every browser
+  // request arrives via HA Supervisor's fixed proxy IP, so without this carve-out unrelated
+  // users on the same Home Assistant instance would share one rate-limit bucket.
+  await app.register(rateLimit, {
+    global: false,
+    allowList: (request) =>
+      isTrustedIngressRequest({
+        addonMode: env.HA_GATEKEEPER_ADDON,
+        ip: request.ip,
+        headers: request.headers
+      }),
+    errorResponseBuilder: rateLimitErrorResponseBuilder
+  });
 
-    if (env.HA_GATEKEEPER_ADDON) {
+  app.post(
+    "/login",
+    { config: { rateLimit: { max: 10, timeWindow: "1 minute" } } },
+    async (request, reply) => {
+      const ip = request.ip ?? null;
+      const loginAllowed = isAdminLoginAllowed({
+        addonMode: env.HA_GATEKEEPER_ADDON,
+        sessionAdmin: request.session.get("admin") === true,
+        ip: request.ip,
+        headers: request.headers
+      });
+      if (!loginAllowed) {
+        await logAudit(request.log, {
+          clientId: null,
+          permissionId: null,
+          actionIdRaw: "admin.login",
+          ip,
+          success: false,
+          error: "unauthorized"
+        });
+        return sendUnauthorized(reply);
+      }
+
+      if (env.HA_GATEKEEPER_ADDON) {
+        request.session.set("admin", true);
+        await logAudit(request.log, {
+          clientId: null,
+          permissionId: null,
+          actionIdRaw: "admin.login",
+          ip,
+          success: true
+        });
+        return reply.send({ ok: true });
+      }
+
+      const parsed = loginSchema.safeParse(request.body ?? {});
+      if (!parsed.success) {
+        await logAudit(request.log, {
+          clientId: null,
+          permissionId: null,
+          actionIdRaw: "admin.login",
+          ip,
+          success: false,
+          error: "invalid_body"
+        });
+        return reply.status(400).send({ ok: false, error: "invalid_body" });
+      }
+
+      if (!timingSafeEqual(parsed.data.password, env.ADMIN_PASSWORD)) {
+        await logAudit(request.log, {
+          clientId: null,
+          permissionId: null,
+          actionIdRaw: "admin.login",
+          ip,
+          success: false,
+          error: "invalid_credentials"
+        });
+        return reply.status(401).send({ ok: false, error: "invalid_credentials" });
+      }
+
       request.session.set("admin", true);
+      await logAudit(request.log, {
+        clientId: null,
+        permissionId: null,
+        actionIdRaw: "admin.login",
+        ip,
+        success: true
+      });
       return reply.send({ ok: true });
     }
-
-    const parsed = loginSchema.safeParse(request.body ?? {});
-    if (!parsed.success) {
-      return reply.status(400).send({ ok: false, error: "invalid_body" });
-    }
-
-    if (parsed.data.password !== env.ADMIN_PASSWORD) {
-      return reply.status(401).send({ ok: false, error: "invalid_credentials" });
-    }
-
-    request.session.set("admin", true);
-    return reply.send({ ok: true });
-  });
+  );
 
   app.post("/logout", async (request, reply) => {
     request.session.delete();
+    await logAudit(request.log, {
+      clientId: null,
+      permissionId: null,
+      actionIdRaw: "admin.logout",
+      ip: request.ip ?? null,
+      success: true
+    });
     return reply.send({ ok: true });
   });
 
@@ -167,6 +235,14 @@ export const adminRoutes: FastifyPluginAsync = async (app) => {
 
     const result = await createTokenAccess(prisma, parsed.data);
 
+    await logAudit(request.log, {
+      clientId: result.client.id,
+      permissionId: null,
+      actionIdRaw: "admin.client.create",
+      ip: request.ip ?? null,
+      success: true
+    });
+
     return reply.send({
       ok: true,
       client: normalizeClient(result.client),
@@ -187,6 +263,14 @@ export const adminRoutes: FastifyPluginAsync = async (app) => {
     const result = await createTokenAccess(prisma, {
       name: parsed.data.name,
       permissions: parsed.data.permissions
+    });
+
+    await logAudit(request.log, {
+      clientId: result.client.id,
+      permissionId: null,
+      actionIdRaw: "admin.client.quick_setup",
+      ip: request.ip ?? null,
+      success: true
     });
 
     return reply.send({
@@ -216,6 +300,14 @@ export const adminRoutes: FastifyPluginAsync = async (app) => {
       include: { permissions: true }
     });
 
+    await logAudit(request.log, {
+      clientId: client.id,
+      permissionId: null,
+      actionIdRaw: "admin.client.update",
+      ip: request.ip ?? null,
+      success: true
+    });
+
     return reply.send({ ok: true, client: normalizeClient(client) });
   });
 
@@ -235,6 +327,14 @@ export const adminRoutes: FastifyPluginAsync = async (app) => {
       return reply.status(404).send({ ok: false, error: "client_not_found" });
     }
 
+    await logAudit(request.log, {
+      clientId: client.id,
+      permissionId: null,
+      actionIdRaw: "admin.client.permissions.update",
+      ip: request.ip ?? null,
+      success: true
+    });
+
     return reply.send({ ok: true, client: normalizeClient(client) });
   });
 
@@ -250,6 +350,14 @@ export const adminRoutes: FastifyPluginAsync = async (app) => {
       where: { id: clientId },
       data: { apiKeyHash, apiKeyPrefix },
       include: { permissions: true }
+    });
+
+    await logAudit(request.log, {
+      clientId: client.id,
+      permissionId: null,
+      actionIdRaw: "admin.client.rotate_key",
+      ip: request.ip ?? null,
+      success: true
     });
 
     return reply.send({ ok: true, client: normalizeClient(client), apiKey });
@@ -274,6 +382,18 @@ export const adminRoutes: FastifyPluginAsync = async (app) => {
       request.log.error({ err }, "client_delete_failed");
       return reply.status(400).send({ ok: false, error: "client_delete_failed" });
     }
+
+    // clientId is intentionally null here: the client row no longer exists, and AuditLog.clientId
+    // has a foreign key to Client.id, so logging with the deleted id would violate the constraint.
+    // The deleted id is preserved in `error` instead so it's still recoverable in the trail.
+    await logAudit(request.log, {
+      clientId: null,
+      permissionId: null,
+      actionIdRaw: "admin.client.delete",
+      ip: request.ip ?? null,
+      success: true,
+      error: `deleted_client:${clientId}`
+    });
 
     return reply.send({ ok: true });
   });

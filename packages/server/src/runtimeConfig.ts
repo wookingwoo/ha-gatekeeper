@@ -16,6 +16,7 @@ export type RuntimeConfig = {
   HA_GATEKEEPER_ADDON: boolean;
   ADDON_EXPOSE_API: boolean;
   LOG_LEVEL: z.infer<typeof logLevelSchema>;
+  AUDIT_LOG_RETENTION_DAYS: number;
 };
 
 const commonSchema = z.object({
@@ -25,7 +26,8 @@ const commonSchema = z.object({
   ADMIN_SESSION_SECRET: z.string().trim().min(8),
   API_KEY_HASH_SECRET: z.string().trim().min(16),
   CORS_ORIGIN: z.string().default("http://localhost:5173"),
-  LOG_LEVEL: logLevelSchema
+  LOG_LEVEL: logLevelSchema,
+  AUDIT_LOG_RETENTION_DAYS: z.coerce.number().int().min(0).default(90)
 });
 
 const standaloneSchema = commonSchema.extend({
@@ -58,7 +60,8 @@ export function resolveRuntimeConfig(raw: Record<string, string | undefined>): R
       CORS_ORIGIN: parsed.CORS_ORIGIN,
       HA_GATEKEEPER_ADDON,
       ADDON_EXPOSE_API,
-      LOG_LEVEL: parsed.LOG_LEVEL
+      LOG_LEVEL: parsed.LOG_LEVEL,
+      AUDIT_LOG_RETENTION_DAYS: parsed.AUDIT_LOG_RETENTION_DAYS
     };
   }
 
@@ -76,7 +79,8 @@ export function resolveRuntimeConfig(raw: Record<string, string | undefined>): R
     CORS_ORIGIN: parsed.CORS_ORIGIN,
     HA_GATEKEEPER_ADDON,
     ADDON_EXPOSE_API,
-    LOG_LEVEL: parsed.LOG_LEVEL
+    LOG_LEVEL: parsed.LOG_LEVEL,
+    AUDIT_LOG_RETENTION_DAYS: parsed.AUDIT_LOG_RETENTION_DAYS
   };
 }
 

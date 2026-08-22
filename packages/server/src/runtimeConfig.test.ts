@@ -32,8 +32,21 @@ test("standalone mode resolves HA config, admin secrets, CORS origin, and port",
     CORS_ORIGIN: "https://gatekeeper.example",
     HA_GATEKEEPER_ADDON: false,
     ADDON_EXPOSE_API: false,
-    LOG_LEVEL: "debug"
+    LOG_LEVEL: "debug",
+    AUDIT_LOG_RETENTION_DAYS: 90
   });
+});
+
+test("AUDIT_LOG_RETENTION_DAYS defaults to 90 and accepts an explicit override", () => {
+  assert.equal(resolveRuntimeConfig(validStandaloneEnv).AUDIT_LOG_RETENTION_DAYS, 90);
+  assert.equal(
+    resolveRuntimeConfig({ ...validStandaloneEnv, AUDIT_LOG_RETENTION_DAYS: "30" }).AUDIT_LOG_RETENTION_DAYS,
+    30
+  );
+  assert.equal(
+    resolveRuntimeConfig({ ...validStandaloneEnv, AUDIT_LOG_RETENTION_DAYS: "0" }).AUDIT_LOG_RETENTION_DAYS,
+    0
+  );
 });
 
 test("add-on mode uses supervisor core API and SUPERVISOR_TOKEN", () => {

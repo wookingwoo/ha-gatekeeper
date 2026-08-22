@@ -62,6 +62,18 @@ type ApiResponse<T> = {
   ok: boolean;
 } & T;
 
+export class ApiError extends Error {
+  status: number;
+  code: string;
+
+  constructor(status: number, code: string) {
+    super(`request_failed:${status}:${code}`);
+    this.name = "ApiError";
+    this.status = status;
+    this.code = code;
+  }
+}
+
 export function resolveApiPath(path: string, pathname = getCurrentPathname()): string {
   if (!path.startsWith("/")) {
     return path;
@@ -87,7 +99,12 @@ async function apiFetch<T>(path: string, options?: RequestInit): Promise<ApiResp
   });
 
   if (!res.ok) {
-    throw new Error(`request_failed:${res.status}`);
+    const body: unknown = await res.json().catch(() => null);
+    const code =
+      body && typeof body === "object" && "error" in body && typeof body.error === "string"
+        ? body.error
+        : "unknown_error";
+    throw new ApiError(res.status, code);
   }
 
   return res.json();

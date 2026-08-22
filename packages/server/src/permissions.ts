@@ -46,7 +46,7 @@ type ServicePermissionResult =
 
 type StatePermissionResult =
   | { ok: true; permission: Extract<TokenPermissionRule, { kind: "state" }> }
-  | { ok: false; error: "entity_not_allowed" };
+  | { ok: false; error: "forbidden" | "entity_not_allowed" };
 
 function parseStringArray(value: string): string[] | null {
   try {
@@ -182,5 +182,5 @@ export function findAllowedStatePermission(
     }
   }
 
-  return { ok: false, error: sawStatePermission ? "entity_not_allowed" : "entity_not_allowed" };
+  return { ok: false, error: sawStatePermission ? "entity_not_allowed" : "forbidden" };
 }

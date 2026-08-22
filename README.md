@@ -105,6 +105,7 @@ Each token has its own permission rules. For example, one token can allow `light
 - `ADMIN_SESSION_SECRET` must be a base64 string of at least 32 bytes. Example: `openssl rand -base64 32`.
 - `API_KEY_HASH_SECRET` should be a strong, random secret.
 - `HA_TOKEN` is a Home Assistant long-lived access token. Keep it private.
+- `AUDIT_LOG_RETENTION_DAYS` controls how long audit log rows are kept before being pruned on startup. Defaults to `90`. Set to `0` to disable pruning.
 
 ## Docker
 
@@ -121,6 +122,8 @@ docker run -p 8080:8080 \
   -v $(pwd)/data:/data \
   ha-gatekeeper
 ```
+
+The container runs as a non-root user (uid `1001`). If `./data` already exists on the host before the first run, make sure it's writable by that user, for example `mkdir -p data && chown 1001:1001 data`.
 
 ## Public API
 

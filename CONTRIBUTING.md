@@ -49,11 +49,29 @@ npm run dev
 1. Update documentation for user-facing changes.
 1. Include screenshots or recordings for UI changes.
 1. Make sure `npm run build` completes successfully.
+1. Make sure the unit tests and, if relevant, the e2e tests pass (see Testing below).
 1. If you add new endpoints or behavior, update `README.md` or add relevant docs.
 
 ## Testing
 
-There are no automated tests yet. If you add tests, include clear instructions to run them.
+Run unit tests per workspace.
+
+```bash
+npm run test -w packages/server
+npm run test -w packages/web
+npm run test -w packages/mcp
+```
+
+Run Playwright end-to-end tests.
+
+```bash
+npx playwright install chromium
+npx playwright install-deps chromium
+npm run e2e
+```
+
+Add tests alongside any behavior change, especially for security-relevant logic (auth,
+permission matching, token handling).
 
 ## Security Issues
 

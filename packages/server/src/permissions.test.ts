@@ -85,6 +85,12 @@ test("blocks state reads outside the permission", () => {
   assert.deepEqual(match, { ok: false, error: "entity_not_allowed" });
 });
 
+test("blocks state reads when the client has no state permission at all", () => {
+  const match = findAllowedStatePermission([livingRoomControl], "binary_sensor.front_door");
+
+  assert.deepEqual(match, { ok: false, error: "forbidden" });
+});
+
 test("serializes a service permission for storage", () => {
   assert.deepEqual(
     serializePermission({

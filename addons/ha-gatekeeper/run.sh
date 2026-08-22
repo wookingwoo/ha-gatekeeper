@@ -47,5 +47,14 @@ export CORS_ORIGIN=http://localhost:8080
 
 cd /app/packages/server
 
-npx prisma db push --skip-generate
+# Existing installs were provisioned with `prisma db push`, which never wrote Prisma's
+# migration-history table. A bare `migrate deploy` against such a database fails (P3005,
+# "database schema is not empty"). Baseline it once, then retry; fresh installs take the
+# fast path on the first attempt every time.
+if ! npx prisma migrate deploy; then
+  npx prisma migrate resolve --applied 20260208081112_init
+  npx prisma migrate resolve --applied 20260519131500_token_permissions
+  npx prisma migrate deploy
+fi
+
 exec node dist/index.js

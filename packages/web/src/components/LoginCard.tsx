@@ -1,20 +1,33 @@
+import type { ApiError } from "../api";
 import { Button } from "./ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "./ui/card";
 import { Input } from "./ui/input";
+
+function loginErrorMessage(error: ApiError | null): string | null {
+  if (!error) {
+    return null;
+  }
+  if (error.code === "rate_limited") {
+    return "Too many login attempts. Wait a moment and try again.";
+  }
+  return "Login failed. Check your password.";
+}
 
 export function LoginCard({
   password,
   onPasswordChange,
   onSubmit,
   isSubmitting,
-  hasError
+  error
 }: {
   password: string;
   onPasswordChange: (value: string) => void;
   onSubmit: () => void;
   isSubmitting: boolean;
-  hasError: boolean;
+  error: ApiError | null;
 }) {
+  const errorMessage = loginErrorMessage(error);
+
   return (
     <Card>
       <CardHeader>
@@ -42,9 +55,9 @@ export function LoginCard({
         <Button className="w-full" onClick={onSubmit} disabled={isSubmitting}>
           {isSubmitting ? "Logging in..." : "Log in"}
         </Button>
-        {hasError ? (
+        {errorMessage ? (
           <p className="rounded-md border border-[var(--danger-border)] bg-[var(--danger-soft)] p-3 text-sm text-[var(--danger)]">
-            Login failed. Check your password.
+            {errorMessage}
           </p>
         ) : null}
       </CardContent>

@@ -24,14 +24,64 @@ permissions:
 
 env:
   IMAGE_NAME: ghcr.io/wookingwoo/ha-gatekeeper
-  ADDON_VERSION: 0.1.0
 
 jobs:
+  test:
+    runs-on: ubuntu-latest
+    env:
+      DATABASE_URL: "file:${{ github.workspace }}/ci.db"
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Generate Prisma client
+        run: npm run prisma:generate
+
+      - name: Build
+        run: npm run build
+
+      - name: Run server unit tests
+        run: npm run test -w packages/server
+
+      - name: Run web unit tests
+        run: npm run test -w packages/web
+
+      - name: Run MCP unit tests
+        run: npm run test:mcp
+
+      - name: Apply database migrations for e2e
+        run: npx prisma migrate deploy --schema packages/server/prisma/schema.prisma
+
+      - name: Install Playwright browsers
+        run: npx playwright install --with-deps chromium
+
+      - name: Run e2e tests
+        run: npm run e2e
+        env:
+          HA_BASE_URL: "http://127.0.0.1:1"
+          HA_TOKEN: "ci-fake-ha-token"
+          ADMIN_PASSWORD: "change-this-password"
+          ADMIN_SESSION_SECRET: "ci-session-secret-32-bytes-minimum!"
+          API_KEY_HASH_SECRET: "ci-api-key-hash-secret"
+
   build:
+    needs: test
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+
+      - name: Read addon version
+        id: version
+        run: echo "value=$(grep -m1 '^version:' addons/ha-gatekeeper/config.yaml | sed -E 's/version: *"?([^"]*)"?/\1/')" >> "$GITHUB_OUTPUT"
 
       - name: Set up QEMU
         uses: docker/setup-qemu-action@v3
@@ -55,7 +105,7 @@ jobs:
           platforms: linux/amd64,linux/arm64
           push: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' }}
           build-args: |
-            BUILD_VERSION=${{ env.ADDON_VERSION }}
+            BUILD_VERSION=${{ steps.version.outputs.value }}
           tags: |
-            ${{ env.IMAGE_NAME }}:${{ env.ADDON_VERSION }}
+            ${{ env.IMAGE_NAME }}:${{ steps.version.outputs.value }}
             ${{ env.IMAGE_NAME }}:latest

@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { api, type QuickSetupResult, type TokenPermission } from "./api";
+import { api, type ApiError, type QuickSetupResult, type TokenPermission } from "./api";
 import { AppShell, type Tab } from "./components/AppShell";
 import { LoginCard } from "./components/LoginCard";
 import { ActivityPage } from "./pages/ActivityPage";
@@ -47,7 +47,7 @@ export default function App() {
     enabled: authenticated
   });
 
-  const loginMutation = useMutation({
+  const loginMutation = useMutation<{}, ApiError, string>({
     mutationFn: (pwd: string) => api.login(pwd),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["me"] })
   });
@@ -106,7 +106,7 @@ export default function App() {
             onPasswordChange={setPassword}
             onSubmit={() => loginMutation.mutate(password)}
             isSubmitting={loginMutation.isPending}
-            hasError={loginMutation.isError}
+            error={loginMutation.error}
           />
         </div>
       </div>
