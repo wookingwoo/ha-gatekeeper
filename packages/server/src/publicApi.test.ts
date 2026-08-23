@@ -236,3 +236,23 @@ test("proxies a successful state read and passes through the Home Assistant resp
   assert.equal(logs.length, 1);
   assert.equal(logs[0].success, true);
 });
+
+test("serves an OpenAPI document describing the public routes", async () => {
+  const response = await app.inject({ method: "GET", url: "/api/documentation/json" });
+
+  assert.equal(response.statusCode, 200);
+  const doc = response.json();
+  assert.equal(doc.info.title, "HA Gatekeeper Public API");
+  assert.deepEqual(Object.keys(doc.paths).sort(), [
+    "/api/capabilities",
+    "/api/services/{domain}/{service}",
+    "/api/states/{entityId}"
+  ]);
+});
+
+test("serves the Swagger UI page", async () => {
+  const response = await app.inject({ method: "GET", url: "/api/documentation/static/index.html" });
+
+  assert.equal(response.statusCode, 200);
+  assert.match(String(response.headers["content-type"]), /^text\/html/);
+});

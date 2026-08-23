@@ -17,6 +17,8 @@
     "@fastify/rate-limit": "^9.1.0",
     "@fastify/secure-session": "7.5.0",
     "@fastify/static": "^7.0.4",
+    "@fastify/swagger": "^8.15.0",
+    "@fastify/swagger-ui": "^2.1.0",
     "@prisma/client": "^5.20.0",
     "dotenv": "^16.4.5",
     "fastify": "^4.28.1",
