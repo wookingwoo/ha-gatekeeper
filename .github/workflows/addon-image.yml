@@ -58,7 +58,7 @@ jobs:
         run: npm run test:mcp
 
       - name: Apply database migrations for e2e
-        run: npx prisma migrate deploy --schema packages/server/prisma/schema.prisma
+        run: packages/server/node_modules/.bin/prisma migrate deploy --schema packages/server/prisma/schema.prisma
 
       - name: Install Playwright browsers
         run: npx playwright install --with-deps chromium
