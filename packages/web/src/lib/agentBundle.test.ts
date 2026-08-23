@@ -389,7 +389,7 @@ test("getDefaultGatekeeperBaseUrl maps local Vite origins and keeps production o
       port: "5173",
       origin: "http://localhost:5173"
     }),
-    "http://localhost:8080"
+    "http://localhost:4283"
   );
   assert.equal(
     getDefaultGatekeeperBaseUrl({
@@ -398,7 +398,7 @@ test("getDefaultGatekeeperBaseUrl maps local Vite origins and keeps production o
       port: "5175",
       origin: "http://127.0.0.1:5175"
     }),
-    "http://127.0.0.1:8080"
+    "http://127.0.0.1:4283"
   );
   assert.equal(
     getDefaultGatekeeperBaseUrl({
@@ -427,7 +427,7 @@ test("getDefaultGatekeeperBaseUrl suggests the mapped addon API URL for ingress"
       origin: "http://homeassistant.local",
       pathname: "/api/hassio_ingress/abcdef"
     }),
-    "http://homeassistant.local:8080"
+    "http://homeassistant.local:4283"
   );
 
   assert.equal(
@@ -438,6 +438,6 @@ test("getDefaultGatekeeperBaseUrl suggests the mapped addon API URL for ingress"
       origin: "https://ha.example.test",
       pathname: "/api/hassio_ingress/abcdef/admin"
     }),
-    "https://ha.example.test:8080"
+    "https://ha.example.test:4283"
   );
 });

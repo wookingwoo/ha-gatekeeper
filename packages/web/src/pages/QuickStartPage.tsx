@@ -148,7 +148,7 @@ export function QuickStartPage({
                   id="quickstart-bundle-base-url"
                   value={bundleBaseUrl}
                   onChange={(event) => setBundleBaseUrl(event.target.value)}
-                  placeholder="http://homeassistant.local:8080"
+                  placeholder="http://homeassistant.local:4283"
                 />
               </div>
 
