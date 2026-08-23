@@ -56,6 +56,8 @@ Supported public API endpoints:
 
 Every public API request still requires `Authorization: Bearer <GATEKEEPER_TOKEN>`. HA Gatekeeper checks the token status and matching permission before forwarding service calls or state reads to Home Assistant.
 
+Interactive Swagger/OpenAPI docs for these endpoints are served at `/api/documentation` on the same mapped LAN port (e.g. `http://homeassistant.local:4283/api/documentation`), whenever the API itself is reachable. The docs need no separate login -- the route shapes are already public in this open-source repo -- but every request the UI sends still needs a valid bearer token via its **Authorize** button.
+
 ## Security Notes
 
 - Keep the public API port disabled unless a trusted LAN agent needs it.
