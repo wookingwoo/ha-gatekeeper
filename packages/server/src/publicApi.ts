@@ -1,5 +1,7 @@
 import type { FastifyPluginAsync } from "fastify";
 import rateLimit from "@fastify/rate-limit";
+import swagger from "@fastify/swagger";
+import swaggerUi from "@fastify/swagger-ui";
 import { prisma } from "./db.js";
 import { env } from "./env.js";
 import { proxyHaServiceCall, proxyHaState } from "./ha.js";
@@ -39,6 +41,41 @@ export const publicApiRoutes: FastifyPluginAsync = async (app) => {
     return reply.status(403).send({ ok: false, error: "api_not_exposed" });
   });
 
+  // Registered after the gate above so the docs UI and spec are only reachable under the
+  // same conditions as the API itself (addon mode with expose_api on, or standalone mode).
+  await app.register(swagger, {
+    openapi: {
+      info: {
+        title: "HA Gatekeeper Public API",
+        description: "Scoped Home Assistant service calls and state reads for trusted LAN agents.",
+        version: "1.0.0"
+      },
+      components: {
+        securitySchemes: {
+          bearerAuth: {
+            type: "http",
+            scheme: "bearer",
+            description: "Gatekeeper token issued from the admin UI."
+          }
+        }
+      },
+      security: [{ bearerAuth: [] }]
+    }
+  });
+
+  await app.register(swaggerUi, {
+    routePrefix: "/documentation"
+  });
+
+  app.addSchema({
+    $id: "publicApiError",
+    type: "object",
+    properties: {
+      ok: { type: "boolean", const: false },
+      error: { type: "string" }
+    }
+  });
+
   // Keyed by bearer-token prefix (not raw IP) so distinct API clients behind the same
   // NAT/router get independent buckets. Falls back to IP only when no token is present at all.
   await app.register(rateLimit, {
@@ -51,7 +88,54 @@ export const publicApiRoutes: FastifyPluginAsync = async (app) => {
     errorResponseBuilder: rateLimitErrorResponseBuilder
   });
 
-  app.get("/capabilities", { config: { rateLimit: publicApiRateLimit } }, async (request, reply) => {
+  app.get(
+    "/capabilities",
+    {
+      config: { rateLimit: publicApiRateLimit },
+      schema: {
+        tags: ["Gatekeeper API"],
+        summary: "List the service calls and state reads this token is allowed to perform",
+        security: [{ bearerAuth: [] }],
+        response: {
+          200: {
+            type: "object",
+            properties: {
+              ok: { type: "boolean" },
+              client: {
+                type: "object",
+                properties: {
+                  id: { type: "string" },
+                  name: { type: "string" },
+                  status: { type: "string" }
+                }
+              },
+              capabilities: {
+                type: "object",
+                properties: {
+                  serviceActions: {
+                    type: "array",
+                    items: {
+                      type: "object",
+                      properties: {
+                        domain: { type: "string" },
+                        service: { type: "string" },
+                        entityIds: { type: "array", items: { type: "string" } },
+                        allowNoEntity: { type: "boolean" }
+                      }
+                    }
+                  },
+                  stateReads: { type: "array", items: { type: "string" } },
+                  unsupportedTargets: { type: "array", items: { type: "string" } }
+                }
+              }
+            }
+          },
+          401: { $ref: "publicApiError#" },
+          403: { $ref: "publicApiError#" }
+        }
+      }
+    },
+    async (request, reply) => {
     const authorization = getAuthorizationHeader(request.headers);
     const auth = await resolvePublicApiClient(authorization, findClientByApiKey);
     const ip = request.ip ?? null;
@@ -81,7 +165,50 @@ export const publicApiRoutes: FastifyPluginAsync = async (app) => {
 
   app.post(
     "/services/:domain/:service",
-    { config: { rateLimit: publicApiRateLimit } },
+    {
+      config: { rateLimit: publicApiRateLimit },
+      schema: {
+        tags: ["Gatekeeper API"],
+        summary: "Call a Home Assistant service, scoped to this token's allowed entities",
+        security: [{ bearerAuth: [] }],
+        params: {
+          type: "object",
+          required: ["domain", "service"],
+          properties: {
+            domain: { type: "string", description: "Home Assistant domain, e.g. light" },
+            service: { type: "string", description: "Service name, e.g. turn_on" }
+          }
+        },
+        body: {
+          type: "object",
+          description:
+            "Same shape as Home Assistant's own service-call body. entity_id (string or array) " +
+            "or target.entity_id must be within the token's allowed entities; area/device/floor/label " +
+            "targets are rejected. Additional service-specific fields (brightness, color, etc.) are " +
+            "forwarded as-is.",
+          properties: {
+            entity_id: {
+              anyOf: [{ type: "string" }, { type: "array", items: { type: "string" } }]
+            },
+            target: {
+              type: "object",
+              properties: {
+                entity_id: {
+                  anyOf: [{ type: "string" }, { type: "array", items: { type: "string" } }]
+                }
+              }
+            }
+          },
+          additionalProperties: true
+        },
+        response: {
+          400: { $ref: "publicApiError#" },
+          401: { $ref: "publicApiError#" },
+          403: { $ref: "publicApiError#" },
+          502: { $ref: "publicApiError#" }
+        }
+      }
+    },
     async (request, reply) => {
       const { domain, service } = request.params as { domain: string; service: string };
       const actionIdRaw = `${domain}.${service}`;
@@ -184,7 +311,29 @@ export const publicApiRoutes: FastifyPluginAsync = async (app) => {
     }
   );
 
-  app.get("/states/:entityId", { config: { rateLimit: publicApiRateLimit } }, async (request, reply) => {
+  app.get(
+    "/states/:entityId",
+    {
+      config: { rateLimit: publicApiRateLimit },
+      schema: {
+        tags: ["Gatekeeper API"],
+        summary: "Read a single entity's state, if this token is allowed to read it",
+        security: [{ bearerAuth: [] }],
+        params: {
+          type: "object",
+          required: ["entityId"],
+          properties: {
+            entityId: { type: "string", description: "e.g. sensor.temperature" }
+          }
+        },
+        response: {
+          401: { $ref: "publicApiError#" },
+          403: { $ref: "publicApiError#" },
+          502: { $ref: "publicApiError#" }
+        }
+      }
+    },
+    async (request, reply) => {
     const { entityId } = request.params as { entityId: string };
     const actionIdRaw = `states.${entityId}`;
     const ip = request.ip ?? null;
