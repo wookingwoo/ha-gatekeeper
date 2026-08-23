@@ -88,12 +88,12 @@ export function getDefaultGatekeeperBaseUrl(
   locationLike: GatekeeperLocationLike = window.location
 ): string {
   if (isAddonIngressPath(locationLike.pathname)) {
-    return `${locationLike.protocol}//${locationLike.hostname}:8080`;
+    return `${locationLike.protocol}//${locationLike.hostname}:4283`;
   }
 
   const isLocalHost = locationLike.hostname === "localhost" || locationLike.hostname === "127.0.0.1";
   if (isLocalHost && VITE_PORTS.has(locationLike.port)) {
-    return `${locationLike.protocol}//${locationLike.hostname}:8080`;
+    return `${locationLike.protocol}//${locationLike.hostname}:4283`;
   }
 
   return locationLike.origin;
