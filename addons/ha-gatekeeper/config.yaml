@@ -1,5 +1,5 @@
 name: HA Gatekeeper
-version: "0.1.0"
+version: "0.2.0"
 slug: ha_gatekeeper
 description: Scoped, audited Gatekeeper tokens for Home Assistant service access.
 url: https://github.com/wookingwoo/ha-gatekeeper
