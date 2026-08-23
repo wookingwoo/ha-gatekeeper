@@ -52,7 +52,7 @@ export function resolveRuntimeConfig(raw: Record<string, string | undefined>): R
       NODE_ENV: parsed.NODE_ENV,
       PORT: parsed.PORT,
       DATABASE_URL: parsed.DATABASE_URL,
-      HA_BASE_URL: "http://supervisor/core/api",
+      HA_BASE_URL: "http://supervisor/core",
       HA_TOKEN: parsed.SUPERVISOR_TOKEN,
       ADMIN_PASSWORD: parsed.ADMIN_PASSWORD || "addon-ingress-authenticated",
       ADMIN_SESSION_SECRET: parsed.ADMIN_SESSION_SECRET,

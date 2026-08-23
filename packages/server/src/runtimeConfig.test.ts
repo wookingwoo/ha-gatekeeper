@@ -57,7 +57,7 @@ test("add-on mode uses supervisor core API and SUPERVISOR_TOKEN", () => {
     API_KEY_HASH_SECRET: "api-key-hash-secret"
   });
 
-  assert.equal(env.HA_BASE_URL, "http://supervisor/core/api");
+  assert.equal(env.HA_BASE_URL, "http://supervisor/core");
   assert.equal(env.HA_TOKEN, "supervisor-token");
   assert.equal(env.HA_GATEKEEPER_ADDON, true);
 });
