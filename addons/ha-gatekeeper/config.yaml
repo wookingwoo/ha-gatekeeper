@@ -23,9 +23,13 @@ ports_description:
 options:
   expose_api: false
   log_level: info
+  public_api_ip_rate_limit: 300
+  ha_request_timeout_seconds: 30
   cloudflare_tunnel_enabled: false
   cloudflare_public_url: ""
 schema:
+  public_api_ip_rate_limit: "int(1,2147483647)"
+  ha_request_timeout_seconds: "int(1,600)"
   expose_api: bool
   log_level: "list(trace|debug|info|warn|error|fatal)"
   cloudflare_tunnel_enabled: bool

@@ -210,3 +210,10 @@ test("HA deadline defaults and validates in both modes", () => {
     }
   }
 });
+
+test("HA deadline rejects Node timer overflow", () => {
+  for (const base of [validStandaloneEnv, tunnelAddonConfig]) {
+    assert.equal(resolveRuntimeConfig({ ...base, HA_REQUEST_TIMEOUT_MS: "2147483647" }).HA_REQUEST_TIMEOUT_MS, 2147483647);
+    assert.throws(() => resolveRuntimeConfig({ ...base, HA_REQUEST_TIMEOUT_MS: "2147483648" }), /HA_REQUEST_TIMEOUT_MS/);
+  }
+});

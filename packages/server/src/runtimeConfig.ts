@@ -27,7 +27,7 @@ export type RuntimeConfig = {
 const commonSchema = z.object({
   NODE_ENV: nodeEnvSchema,
   PUBLIC_API_IP_RATE_LIMIT: z.coerce.number().int().positive().default(300),
-  HA_REQUEST_TIMEOUT_MS: z.coerce.number().int().positive().default(30000),
+  HA_REQUEST_TIMEOUT_MS: z.coerce.number().int().positive().max(2147483647).default(30000),
   PORT: z.coerce.number().int().positive().default(8080),
   DATABASE_URL: z.string().default("file:./prisma/dev.db"),
   ADMIN_SESSION_SECRET: z.string().trim().min(8),

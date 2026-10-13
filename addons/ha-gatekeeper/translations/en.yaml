@@ -13,3 +13,9 @@ configuration:
   cloudflare_public_url:
     name: Public Gatekeeper URL
     description: Your HTTPS hostname, such as https://gatekeeper.example.com. Used in agent setup bundles.
+  public_api_ip_rate_limit:
+    name: Public API requests per IP per minute
+    description: Positive integer; defaults to 300 (1..2147483647).
+  ha_request_timeout_seconds:
+    name: Home Assistant request timeout (seconds)
+    description: Positive integer; defaults to 30 (1..600).
