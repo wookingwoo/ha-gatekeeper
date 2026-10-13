@@ -129,10 +129,20 @@ test("surfaces a failed token request without losing the selected permissions", 
 test("makes token selection and navigation usable on narrow screens", async ({
   page,
 }) => {
+  await page.setViewportSize({ width: 320, height: 740 });
   await page.goto("/");
   await expect(
     page.getByRole("button", { name: "Quick Start", exact: true }),
   ).toHaveAttribute("aria-current", "page");
+  const navigation = page.getByRole("navigation", { name: "Primary navigation" });
+  const navBounds = await navigation.boundingBox();
+  const mainBounds = await page.getByRole("main").boundingBox();
+  expect(navBounds).not.toBeNull();
+  expect(mainBounds).not.toBeNull();
+  expect(navBounds!.y + navBounds!.height).toBeLessThanOrEqual(mainBounds!.y);
+  await navigation.getByRole("button", { name: "Tokens", exact: true }).click();
+  await expect(page.getByRole("heading", { name: "Tokens", exact: true })).toBeVisible();
+  await navigation.getByRole("button", { name: "Quick Start", exact: true }).click();
   await page.getByRole("button", { name: "Select entities" }).click();
   await expect(
     page.getByRole("textbox", { name: "Search by name or entity ID" }),

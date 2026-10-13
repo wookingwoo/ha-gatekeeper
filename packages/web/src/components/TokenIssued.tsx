@@ -64,7 +64,7 @@ export function TokenIssued({
   return (
     <div className="space-y-6">
       <PageHeading
-        eyebrow="Access studio / all set"
+        eyebrow="Quick Start / all set"
         title="Token issued"
         description="Your access key is ready. Copy it now — it will not be shown again."
       />

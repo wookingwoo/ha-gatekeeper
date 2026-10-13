@@ -17,10 +17,11 @@ A single-container API gateway for Home Assistant that issues limited, audited b
 
 ![Admin dashboard](docs/assets/screenshot-admin-dashboard.png)
 
-The access console uses a charcoal, ivory, and lime palette with locally bundled
-typography. Token creation has two steps: configure services and entities, then
-review the exact scope before issuing a key. Mobile screens have bottom navigation,
-fixed setup actions, and compact activity entries with expandable request details.
+The access console keeps its slate-and-teal theme and top navigation, with locally
+bundled IBM Plex Sans and Space Grotesk fonts. Token creation has two steps:
+configure services and entities, then review the exact scope before issuing a key.
+Mobile screens have fixed setup actions and compact activity entries with
+expandable request details.
 Token and activity views include search, filters, and loading and error feedback.
 The screenshots use demonstration entities and tokens.
 

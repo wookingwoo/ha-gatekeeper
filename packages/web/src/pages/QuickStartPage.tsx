@@ -86,9 +86,9 @@ export function QuickStartPage({
   return (
     <div className="space-y-5 sm:space-y-7">
       <PageHeading
-        eyebrow="01 / Access studio"
+        eyebrow="Quick Start"
         title="Create scoped access"
-        description="Open the right doors. Give every person and agent a key with just the access they need."
+        description="Issue a Gatekeeper token that only allows selected Home Assistant domains, services, and entities."
       />
       {hasSubmitError ? (
         <ErrorNotice>
