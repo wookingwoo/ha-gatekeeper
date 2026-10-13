@@ -63,7 +63,7 @@ test("index exits and closes hung HA socket within bounded shutdown", async () =
     const haDeadline = Date.now() + 2000;
     while (!received && Date.now() < haDeadline) await new Promise((resolve) => setTimeout(resolve, 20));
     if (!received) throw new Error('upstream request was not received');
-    
+
     child.kill('SIGTERM');
     let exitTimer: ReturnType<typeof setTimeout> | undefined;
     try { await Promise.race([once(child, 'close'), new Promise((_, reject) => { exitTimer = setTimeout(() => reject(new Error('shutdown exceeded 6500ms')), 6500); })]); } finally { clearTimeout(exitTimer); }
