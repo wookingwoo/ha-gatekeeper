@@ -12,13 +12,13 @@ export function PageHeading({
   children?: ReactNode;
 }) {
   return (
-    <section className="flex flex-wrap items-end justify-between gap-5">
+    <section className="flex flex-wrap items-end justify-between gap-4">
       <div className="max-w-2xl">
         <p className="eyebrow mb-3">{eyebrow}</p>
-        <h2 className="text-3xl font-semibold tracking-[-0.04em] sm:text-4xl">
+        <h2 className="text-[30px] font-semibold leading-[1.13] tracking-[-.055em] sm:text-[42px] xl:text-[46px]">
           {title}
         </h2>
-        <p className="mt-3 max-w-xl text-sm leading-relaxed text-[var(--muted)] sm:text-base">
+        <p className="mt-3 max-w-lg text-xs leading-relaxed text-[var(--muted)] sm:text-[13px]">
           {description}
         </p>
       </div>

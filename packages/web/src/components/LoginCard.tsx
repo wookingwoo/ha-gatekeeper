@@ -1,5 +1,6 @@
 import type { ApiError } from "../api";
 import { useTheme } from "../lib/theme";
+import { BrandMark } from "./BrandMark";
 import { Icon } from "./Icon";
 import { ErrorNotice } from "./Feedback";
 import { Button } from "./ui/button";
@@ -24,55 +25,49 @@ export function LoginCard({
     : error.code === "rate_limited"
       ? "Too many login attempts. Wait a moment and try again."
       : "Login failed. Check your password and try again.";
-
   return (
-    <div className="grid min-h-screen lg:grid-cols-2">
-      <section className="relative hidden flex-col justify-between overflow-hidden bg-[#183b2c] p-12 text-white lg:flex xl:p-16">
+    <div className="grid min-h-screen lg:grid-cols-[.95fr_1.05fr]">
+      <section className="gate-rail relative m-3 hidden min-h-[780px] flex-col justify-between overflow-hidden rounded-2xl p-10 lg:flex xl:p-14">
         <div className="flex items-center gap-3">
-          <Icon name="shield" size={28} />
-          <h1 className="text-lg font-semibold tracking-tight">
-            ha-gatekeeper
-          </h1>
+          <BrandMark className="h-10 w-10 text-[#d8ec9c]" />
+          <h1 className="text-lg font-bold tracking-tight">ha-gatekeeper</h1>
         </div>
-        <div className="relative my-16 max-w-lg">
-          <p className="mb-6 text-xs font-medium uppercase tracking-[.2em] text-[#a8cfb6]">
-            A thoughtful way to share your home
+        <div className="relative z-10 my-10 max-w-md">
+          <p className="mb-6 text-[10px] uppercase tracking-[.22em] text-[#bac7a6]">
+            Home Assistant, on your terms
           </p>
-          <h2 className="text-5xl font-medium leading-[1.12] tracking-[-.045em] xl:text-6xl">
-            A little access.
+          <h2 className="text-5xl font-medium leading-[1.06] tracking-[-.055em] xl:text-[64px]">
+            Give access.
             <br />
-            <span className="text-[#b6dfaa]">
-              A lot of peace
-              <br />
-              of mind.
-            </span>
+            <span className="text-[#d8ec9c]">Keep control.</span>
           </h2>
-          <p className="mt-7 max-w-sm text-base leading-relaxed text-[#b9cec0]">
-            Give your people and agents the access they need. Keep your Home
-            Assistant credentials safely yours.
+          <p className="mt-6 max-w-sm text-sm leading-relaxed text-[#bec8b2]">
+            A key for every person and agent.
+            <br />
+            Only the doors you choose to open.
           </p>
           <div
             aria-hidden="true"
-            className="relative mt-12 flex h-44 items-center justify-center"
+            className="relative mt-12 grid h-[300px] place-items-center overflow-hidden"
           >
-            <div className="absolute h-44 w-44 rounded-full border border-white/10" />
-            <div className="absolute h-32 w-32 rounded-full border border-white/15" />
-            <div className="relative flex h-20 w-20 items-center justify-center rounded-3xl border border-white/20 bg-white/10 text-[#b6dfaa]">
-              <Icon name="shield" size={42} />
+            <div className="absolute bottom-5 h-[240px] w-[180px] rounded-t-full border border-[#809f59]" />
+            <div className="absolute bottom-5 h-[270px] w-[240px] rounded-t-full border border-[#536b40]" />
+            <div className="absolute bottom-5 h-[300px] w-[300px] rounded-t-full border border-[#3e5032]" />
+            <div className="absolute bottom-5 left-0 right-0 h-px bg-[#809f59]" />
+            <div className="absolute bottom-5 grid h-[150px] w-[100px] place-items-center rounded-t-full bg-[#d8ec9c] text-[#293824]">
+              <BrandMark className="h-14 w-14" />
             </div>
-            <div className="absolute left-6 flex items-center gap-2 rounded-xl border border-white/15 bg-[#214b37] px-4 py-3 text-xs">
-              <Icon name="home" size={16} />
-              Your home
-            </div>
-            <div className="absolute right-0 flex items-center gap-2 rounded-xl border border-white/15 bg-[#214b37] px-4 py-3 text-xs">
-              <Icon name="key" size={16} />
-              Scoped access
-            </div>
+            <span className="absolute bottom-20 left-0 rounded-lg border border-[#657852] bg-[#2b392b] px-3 py-2 text-[9px] uppercase tracking-[.1em] text-[#dce5cb]">
+              Precise permissions
+            </span>
+            <span className="absolute right-0 top-24 rounded-lg border border-[#657852] bg-[#2b392b] px-3 py-2 text-[9px] uppercase tracking-[.1em] text-[#dce5cb]">
+              Private credentials
+            </span>
           </div>
         </div>
-        <p className="flex items-center gap-2 text-xs text-[#b9cec0]">
-          <Icon name="lock" size={14} />
-          Private credentials. Precise permissions.
+        <p className="flex items-center gap-2 text-[10px] uppercase tracking-[.15em] text-[#bec8b2]">
+          <Icon name="lock" size={13} />
+          Built around your boundaries
         </p>
       </section>
       <section className="relative flex flex-col justify-center p-6 sm:p-12">
@@ -82,21 +77,19 @@ export function LoginCard({
           onClick={toggleTheme}
           aria-label={theme === "light" ? "Dark mode" : "Light mode"}
         >
-          <Icon name={theme === "light" ? "moon" : "sun"} />
+          <Icon name={theme === "light" ? "moon" : "sun"} size={18} />
         </Button>
         <div className="mx-auto w-full max-w-sm py-12">
-          <div className="icon-tile mb-8 h-14 w-14 rounded-2xl">
-            <Icon name="shield" size={28} />
-          </div>
-          <h1 className="mb-6 text-base font-semibold lg:hidden">
-            ha-gatekeeper
-          </h1>
-          <p className="eyebrow mb-3">Your access workspace</p>
-          <h2 className="text-3xl font-semibold tracking-[-.04em]">
+          <BrandMark className="mb-6 h-14 w-14 text-[var(--primary)]" />
+          <h1 className="mb-6 text-sm font-bold lg:hidden">ha-gatekeeper</h1>
+          <p className="eyebrow mb-4">Your private workspace</p>
+          <h2 className="text-[38px] font-semibold leading-tight tracking-[-.055em]">
             Welcome home.
           </h2>
-          <p className="mt-3 text-sm leading-relaxed text-[var(--muted)]">
-            Log in to manage who can access your Home Assistant.
+          <p className="mt-3 text-[13px] leading-relaxed text-[var(--muted)]">
+            A little access. A lot of peace of mind.
+            <br />
+            Log in to manage the keys to your home.
           </p>
           <form
             className="mt-9 space-y-5"
@@ -140,13 +133,13 @@ export function LoginCard({
               ) : (
                 <>
                   Log in
-                  <Icon name="arrow" size={17} />
+                  <Icon name="arrow" size={16} />
                 </>
               )}
             </Button>
           </form>
-          <div className="mt-8 flex items-start gap-2.5 border-t border-[var(--border)] pt-5 text-xs leading-relaxed text-[var(--muted)]">
-            <Icon name="lock" size={15} className="mt-0.5 shrink-0" />
+          <div className="mt-8 flex items-start gap-2.5 border-t border-[var(--border)] pt-5 text-[11px] leading-relaxed text-[var(--muted)]">
+            <Icon name="lock" size={14} className="mt-0.5 shrink-0" />
             <p>
               Your Home Assistant token stays on the server.
               <br />

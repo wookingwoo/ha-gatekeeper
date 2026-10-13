@@ -1,6 +1,6 @@
 import type { ReactNode } from "react";
 import { useTheme } from "../lib/theme";
-import { cn } from "../lib/utils";
+import { BrandMark } from "./BrandMark";
 import { Icon, type IconName } from "./Icon";
 import { Button } from "./ui/button";
 import { Badge } from "./ui/badge";
@@ -37,82 +37,109 @@ export function AppShell({
       : haStatus === "error"
         ? "Home Assistant unavailable"
         : "Checking Home Assistant";
+  const themeLabel = theme === "light" ? "Dark mode" : "Light mode";
 
   return (
-    <div className="min-h-screen text-[var(--foreground)] lg:grid lg:grid-cols-[232px_minmax(0,1fr)]">
+    <div className="min-h-screen lg:grid lg:grid-cols-[240px_minmax(0,1fr)]">
       <a
         href="#main-content"
         className="sr-only z-50 rounded-lg bg-[var(--surface)] p-3 text-sm focus:not-sr-only focus:fixed focus:left-4 focus:top-4"
       >
         Skip to content
       </a>
-      <aside className="border-b border-[var(--border)] bg-[var(--surface)] lg:sticky lg:top-0 lg:flex lg:h-screen lg:flex-col lg:border-b-0 lg:border-r">
-        <div className="flex items-center gap-3 px-5 py-5 lg:px-6 lg:py-8">
-          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-[var(--primary)] text-[var(--primary-foreground)]">
-            <Icon name="shield" size={24} />
+      <aside className="gate-rail lg:sticky lg:top-3 lg:m-3 lg:flex lg:h-[calc(100dvh-24px)] lg:flex-col lg:rounded-2xl">
+        <div className="flex items-center justify-between px-5 py-4 lg:px-5 lg:py-7">
+          <div className="flex items-center gap-2.5">
+            <BrandMark className="h-9 w-9 shrink-0 text-[#d8ec9c]" />
+            <div>
+              <h1 className="text-[14px] font-bold tracking-tight">
+                ha-gatekeeper
+              </h1>
+              <p className="mt-1 text-[9px] uppercase tracking-[.18em] text-[#b5bcac]">
+                Scoped access
+              </p>
+            </div>
           </div>
-          <div>
-            <h1 className="text-base font-semibold tracking-tight">
-              ha-gatekeeper
-            </h1>
-            <p className="mt-0.5 text-[10px] tracking-wide text-[var(--muted)]">
-              HOME ASSISTANT ACCESS
-            </p>
+          <div className="flex gap-1 lg:hidden">
+            <button
+              type="button"
+              className="grid h-10 w-10 place-items-center rounded-lg text-[#d8decf] hover:bg-[#33432b]"
+              onClick={toggleTheme}
+              aria-label={themeLabel}
+            >
+              <Icon name={theme === "light" ? "moon" : "sun"} size={18} />
+            </button>
+            <button
+              type="button"
+              className="grid h-10 w-10 place-items-center rounded-lg text-[#d8decf] hover:bg-[#33432b] disabled:opacity-50"
+              onClick={onLogout}
+              disabled={isLoggingOut}
+              aria-label={isLoggingOut ? "Logging out…" : "Log out"}
+            >
+              <Icon name="logout" size={17} />
+            </button>
           </div>
         </div>
-        <div className="px-4 lg:mt-5">
-          <p className="mb-3 hidden px-3 text-[10px] font-semibold uppercase tracking-[.15em] text-[var(--muted)] lg:block">
-            Workspace
-          </p>
-          <nav
-            className="grid grid-cols-3 gap-1 pb-3 lg:grid-cols-1 lg:gap-2 lg:pb-0"
-            aria-label="Primary navigation"
-          >
-            {tabs.map((tab) => (
-              <button
-                key={tab}
-                type="button"
-                aria-current={activeTab === tab ? "page" : undefined}
-                onClick={() => onTabChange(tab)}
-                className={cn(
-                  "flex min-h-11 items-center justify-center gap-2 rounded-xl px-3 py-3 text-xs font-medium transition-colors lg:justify-start lg:gap-3 lg:text-sm",
-                  activeTab === tab
-                    ? "bg-[var(--primary-soft)] text-[var(--primary)]"
-                    : "text-[var(--muted)] hover:bg-[var(--surface-muted)] hover:text-[var(--foreground)]",
-                )}
+        <p className="mb-4 mt-7 hidden px-6 text-[9px] font-semibold uppercase tracking-[.18em] text-[#96a08b] lg:block">
+          Control room
+        </p>
+        <nav
+          aria-label="Primary navigation"
+          className="gate-rail fixed inset-x-0 bottom-0 z-40 grid grid-cols-3 border-t border-[#46533d] pb-[env(safe-area-inset-bottom)] lg:static lg:mx-3 lg:grid-cols-1 lg:gap-1.5 lg:border-0 lg:pb-0"
+        >
+          {tabs.map((tab, index) => (
+            <button
+              key={tab}
+              type="button"
+              className="gate-nav"
+              aria-current={activeTab === tab ? "page" : undefined}
+              onClick={() => onTabChange(tab)}
+            >
+              <Icon name={tabIcons[tab]} size={18} />
+              <span>{tab}</span>
+              <span
+                aria-hidden="true"
+                className="ml-auto hidden text-[9px] opacity-50 lg:block"
               >
-                <Icon name={tabIcons[tab]} size={18} />
-                {tab}
-                {activeTab === tab ? (
-                  <span className="ml-auto hidden h-1.5 w-1.5 rounded-full bg-[var(--primary)] lg:block" />
-                ) : null}
-              </button>
-            ))}
-          </nav>
-        </div>
-        <div className="mt-auto hidden p-5 lg:block">
-          <div className="rounded-2xl border border-[var(--border)] bg-[var(--surface-muted)] p-4">
-            <Icon name="home" className="mb-3 text-[var(--primary)]" />
-            <p className="text-sm font-semibold">Your home. Your rules.</p>
-            <p className="mt-2 text-xs leading-relaxed text-[var(--muted)]">
-              Share just the access you choose. Keep everything else private.
-            </p>
+                0{index + 1}
+              </span>
+            </button>
+          ))}
+        </nav>
+        <div className="mt-auto hidden px-6 pb-7 lg:block">
+          <div
+            className="relative mb-6 h-28 overflow-hidden border-b border-[#46533d]"
+            aria-hidden="true"
+          >
+            <div className="absolute bottom-0 left-1/2 h-20 w-16 -translate-x-1/2 rounded-t-full border border-b-0 border-[#8fa469]" />
+            <div className="absolute bottom-0 left-1/2 h-24 w-24 -translate-x-1/2 rounded-t-full border border-b-0 border-[#61734e]" />
+            <div className="absolute bottom-0 left-1/2 h-28 w-32 -translate-x-1/2 rounded-t-full border border-b-0 border-[#44543a]" />
+            <div className="absolute bottom-0 left-1/2 h-14 w-8 -translate-x-1/2 rounded-t-full bg-[#d8ec9c]" />
           </div>
-          <div className="mt-5 flex items-center gap-2 px-1 text-[10px] text-[var(--muted)]">
+          <p className="text-sm font-semibold leading-relaxed text-[#edf0e3]">
+            A little access.
+            <br />A lot of peace of mind.
+          </p>
+          <p className="mt-3 text-[11px] leading-relaxed text-[#a7b09d]">
+            Your credentials stay private.
+            <br />
+            Your permissions stay precise.
+          </p>
+          <p className="mt-7 flex items-center gap-2 text-[9px] uppercase tracking-[.14em] text-[#b8c4a8]">
             <Icon name="lock" size={12} />
-            Scoped access, by design
-          </div>
+            Private by design
+          </p>
         </div>
       </aside>
-      <div className="min-w-0">
-        <header className="flex min-h-[76px] flex-wrap items-center justify-between gap-3 border-b border-[var(--border)] bg-[var(--surface)] px-5 py-4 sm:px-8 xl:px-10">
-          <p className="hidden items-center gap-2 text-xs text-[var(--muted)] xl:flex">
-            Access console<span className="mx-1 opacity-40">/</span>
-            <span className="font-medium text-[var(--foreground)]">
-              {activeTab}
-            </span>
+      <div className="min-w-0 pb-32 lg:pb-0">
+        <header className="mx-5 flex min-h-12 items-center justify-between gap-2 border-b border-[var(--border)] py-2 lg:mx-8 lg:min-h-[80px] xl:mx-12">
+          <p className="hidden items-center gap-3 text-[11px] text-[var(--muted)] lg:flex">
+            <Icon name="home" size={14} />
+            <span>Workspace</span>
+            <span className="opacity-40">/</span>
+            <span className="text-[var(--foreground)]">{activeTab}</span>
           </p>
-          <div className="flex min-w-0 flex-wrap items-center gap-2 xl:ml-auto">
+          <div className="flex items-center gap-3 lg:ml-auto">
             <Badge
               variant={
                 haStatus === "connected"
@@ -121,50 +148,50 @@ export function AppShell({
                     ? "danger"
                     : "warning"
               }
-              className="mr-1 py-2"
+              className="border-0 bg-transparent px-0 text-[10px]"
             >
               <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-current" />
               {statusLabel}
             </Badge>
-            <Button
-              size="sm"
-              variant="ghost"
-              onClick={toggleTheme}
-              aria-label={theme === "light" ? "Dark mode" : "Light mode"}
-              title={theme === "light" ? "Dark mode" : "Light mode"}
-              className="min-h-10 min-w-10 px-2"
-            >
-              <Icon name={theme === "light" ? "moon" : "sun"} size={18} />
-            </Button>
-            <span
-              className="mx-1 h-5 w-px bg-[var(--border)]"
-              aria-hidden="true"
-            />
-            <Button
-              size="sm"
-              variant="ghost"
-              onClick={onLogout}
-              disabled={isLoggingOut}
-              className="min-h-10"
-            >
-              <Icon name="logout" size={16} />
-              {isLoggingOut ? "Logging out…" : "Log out"}
-            </Button>
+            <div className="hidden items-center gap-2 border-l border-[var(--border)] pl-3 lg:flex">
+              <Button
+                size="sm"
+                variant="ghost"
+                onClick={toggleTheme}
+                aria-label={themeLabel}
+                title={themeLabel}
+                className="min-h-10 min-w-10 px-2"
+              >
+                <Icon name={theme === "light" ? "moon" : "sun"} size={17} />
+              </Button>
+              <Button
+                size="sm"
+                variant="ghost"
+                onClick={onLogout}
+                disabled={isLoggingOut}
+              >
+                <Icon name="logout" size={15} />
+                {isLoggingOut ? "Logging out…" : "Log out"}
+              </Button>
+            </div>
           </div>
+          <span className="text-[9px] uppercase tracking-[.14em] text-[var(--muted)] lg:hidden">
+            Access console
+          </span>
         </header>
         <main
           id="main-content"
           tabIndex={-1}
-          className="mx-auto max-w-[1400px] p-5 outline-none sm:p-8 xl:p-10"
+          className="mx-auto max-w-[1440px] px-5 py-6 outline-none lg:px-8 lg:py-9 xl:px-12"
         >
           <div key={activeTab} className="page-enter">
             {children}
           </div>
-          <footer className="mt-10 flex flex-wrap items-center justify-between gap-2 border-t border-[var(--border)] pt-5 text-[10px] text-[var(--muted)]">
-            <span>ha-gatekeeper · Home Assistant access console</span>
-            <span className="flex items-center gap-1.5">
-              <Icon name="shield" size={12} />
-              Limited access. Complete control.
+          <footer className="mt-7 hidden flex-wrap items-center justify-between gap-2 border-t border-[var(--border)] pt-4 text-[9px] text-[var(--muted)] lg:flex">
+            <span>Home Assistant access, on your terms.</span>
+            <span className="flex items-center gap-1.5 uppercase tracking-[.12em]">
+              <BrandMark className="h-4 w-4" />
+              Gatekeeper
             </span>
           </footer>
         </main>

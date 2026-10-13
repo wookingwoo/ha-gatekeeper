@@ -114,9 +114,9 @@ export function TokensPage({
   return (
     <div className="space-y-7">
       <PageHeading
-        eyebrow="Access management"
+        eyebrow="02 / Your keys"
         title="Tokens"
-        description="The right access for every person and agent. Review permissions, refresh a key, or remove access."
+        description="A key for every connection. Keep an eye on who has access, and make every permission intentional."
       >
         <Button onClick={onCreate}>
           <Icon name="plus" size={16} />
@@ -150,40 +150,23 @@ export function TokensPage({
           </CardContent>
         </Card>
       ) : null}
-      <div className="grid gap-3 sm:grid-cols-3">
+      <div className="metrics-line">
         {[
-          {
-            label: "Total tokens",
-            count: clients.length,
-            icon: "key" as const,
-          },
-          { label: "Active", count: active, icon: "shield" as const },
-          {
-            label: "Disabled",
-            count: clients.length - active,
-            icon: "lock" as const,
-          },
+          { label: "Total keys", count: clients.length },
+          { label: "Active access", count: active },
+          { label: "Disabled", count: clients.length - active },
         ].map((stat) => (
-          <Card key={stat.label}>
-            <CardContent className="flex items-center gap-4 p-5 sm:p-6">
-              <div className="icon-tile">
-                <Icon name={stat.icon} size={19} />
-              </div>
-              <div>
-                <p className="text-2xl font-semibold tracking-tight">
-                  {isLoading || (hasError && !clients.length)
-                    ? "—"
-                    : stat.count}
-                </p>
-                <p className="mt-0.5 text-xs text-[var(--muted)]">
-                  {stat.label}
-                </p>
-              </div>
-            </CardContent>
-          </Card>
+          <div key={stat.label} className="metric">
+            <p className="metric-value">
+              {isLoading || (hasError && !clients.length)
+                ? "—"
+                : stat.count.toString().padStart(2, "0")}
+            </p>
+            <p className="metric-label">{stat.label}</p>
+          </div>
         ))}
       </div>
-      <Card>
+      <Card className="rounded-xl shadow-none">
         <div className="flex flex-wrap items-center justify-between gap-3 border-b border-[var(--border)] p-5 sm:px-6">
           <div>
             <h3 className="text-base font-semibold">Issued tokens</h3>
@@ -266,8 +249,8 @@ export function TokensPage({
                 <article key={client.id} className="py-5 first:pt-1">
                   <div className="flex flex-wrap items-center justify-between gap-4">
                     <div className="flex min-w-0 items-start gap-3.5">
-                      <div className="icon-tile mt-1 hidden sm:flex">
-                        <Icon name="key" size={18} />
+                      <div className="icon-tile mt-1 flex rounded-full">
+                        <Icon name="key" size={17} />
                       </div>
                       <div className="min-w-0">
                         <div className="flex flex-wrap items-center gap-2.5">

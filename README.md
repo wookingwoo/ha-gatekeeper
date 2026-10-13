@@ -17,10 +17,17 @@ A single-container API gateway for Home Assistant that issues limited, audited b
 
 ![Admin dashboard](docs/assets/screenshot-admin-dashboard.png)
 
-The access console includes a guided permission composer, searchable token and
-activity views, and light and dark themes. The layout adapts to mobile screens,
-with keyboard focus states and clear loading, error, and empty-state feedback.
-The screenshot uses demonstration entities and tokens.
+The access console uses a charcoal, ivory, and lime palette with locally bundled
+typography. Token creation has two steps: configure services and entities, then
+review the exact scope before issuing a key. Mobile screens have bottom navigation,
+fixed setup actions, and compact activity entries with expandable request details.
+Token and activity views include search, filters, and loading and error feedback.
+The screenshots use demonstration entities and tokens.
+
+[Access review](docs/assets/screenshot-access-review.png) ·
+[Dark theme](docs/assets/screenshot-admin-dark.png) ·
+[Mobile setup](docs/assets/screenshot-mobile-setup.png) ·
+[Mobile activity](docs/assets/screenshot-mobile-activity.png)
 
 ## Home Assistant Add-on
 

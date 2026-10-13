@@ -1,4 +1,6 @@
 import { useState } from "react";
+import { useMediaQuery } from "../lib/useMediaQuery";
+import { ActivityTimeline } from "../components/ActivityTimeline";
 import type { AuditLog } from "../api";
 import { Icon } from "../components/Icon";
 import { PageHeading } from "../components/PageHeading";
@@ -27,6 +29,7 @@ export function ActivityPage({
   hasError: boolean;
   onRetry: () => void;
 }) {
+  const compact = useMediaQuery("(max-width: 767px)");
   const [query, setQuery] = useState("");
   const [filter, setFilter] = useState("All requests");
   const allowed = logs.filter((log) => log.success).length;
@@ -44,9 +47,9 @@ export function ActivityPage({
   return (
     <div className="space-y-7">
       <PageHeading
-        eyebrow="Stay informed"
+        eyebrow="03 / Request journal"
         title="Activity"
-        description="Every request tells a story. See what was allowed, what was blocked, and why."
+        description="A clear record of what came through your gate. Follow each request, from permission to result."
       >
         <span className="flex items-center gap-2 text-xs text-[var(--muted)]">
           <span className="h-1.5 w-1.5 rounded-full bg-[var(--primary)]" />
@@ -58,56 +61,35 @@ export function ActivityPage({
           Could not load activity. Please try again.
         </ErrorNotice>
       ) : null}
-      <div className="grid gap-3 sm:grid-cols-3">
+      <div className="metrics-line">
         {[
           {
             value: allowed,
             label: "Allowed requests",
-            icon: "check" as const,
-            description: "Passed your access rules",
-            color: "text-[var(--primary)]",
-            bg: "bg-[var(--primary-soft)]",
+            color: "text-[var(--success)]",
           },
           {
             value: blocked,
             label: "Blocked requests",
-            icon: "shield" as const,
-            description: "Denied or failed requests",
             color: "text-[var(--danger)]",
-            bg: "bg-[var(--danger-soft)]",
           },
           {
             value: unknown,
             label: "Unknown tokens",
-            icon: "key" as const,
-            description: "Requests without a recognized token",
-            color: "text-[var(--muted)]",
-            bg: "bg-[var(--surface-muted)]",
+            color: "text-[var(--foreground)]",
           },
         ].map((stat) => (
-          <Card key={stat.label}>
-            <CardContent className="flex items-start justify-between gap-3 p-5 sm:p-6">
-              <div>
-                <p className="text-xs font-medium text-[var(--muted)]">
-                  {stat.label}
-                </p>
-                <p className="mt-3 text-3xl font-semibold tracking-tight">
-                  {isLoading || (hasError && !logs.length) ? "—" : stat.value}
-                </p>
-                <p className="mt-2 text-[10px] text-[var(--muted)]">
-                  {stat.description}
-                </p>
-              </div>
-              <div
-                className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-xl ${stat.bg} ${stat.color}`}
-              >
-                <Icon name={stat.icon} size={18} />
-              </div>
-            </CardContent>
-          </Card>
+          <div key={stat.label} className="metric">
+            <p className={`metric-value ${stat.color}`}>
+              {isLoading || (hasError && !logs.length)
+                ? "—"
+                : stat.value.toString().padStart(2, "0")}
+            </p>
+            <p className="metric-label">{stat.label}</p>
+          </div>
         ))}
       </div>
-      <Card>
+      <Card className="rounded-xl shadow-none">
         <div className="flex flex-wrap items-center justify-between gap-3 border-b border-[var(--border)] p-5 sm:px-6">
           <div>
             <h3 className="text-base font-semibold">Audit log</h3>
@@ -175,6 +157,8 @@ export function ActivityPage({
                 ) : null}
               </EmptyState>
             )
+          ) : compact ? (
+            <ActivityTimeline logs={visible} />
           ) : (
             <Table>
               <TableHeader>
