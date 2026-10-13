@@ -1,5 +1,5 @@
 import { execSync } from "node:child_process";
-import { mkdtempSync, rmSync } from "node:fs";
+import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
@@ -18,6 +18,8 @@ export type TestDatabase = {
 export function createTestDatabase(): TestDatabase {
   const dir = mkdtempSync(path.join(tmpdir(), "hgk-test-"));
   const databaseUrl = `file:${path.join(dir, "test.db")}`;
+  // Prisma's schema engine requires the SQLite file to exist before connecting.
+  writeFileSync(path.join(dir, "test.db"), "");
 
   // execSync always runs through a shell, which sidesteps Windows failing to exec the
   // `npx.cmd` shim directly (EINVAL) without needing execFileSync's shell:true + args-array
