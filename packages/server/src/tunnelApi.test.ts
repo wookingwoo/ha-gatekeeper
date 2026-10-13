@@ -6,6 +6,7 @@ import secureSession from "@fastify/secure-session";
 import { createTestDatabase } from "./testDb.js";
 
 process.env.NODE_ENV = "test";
+process.env.PUBLIC_API_IP_RATE_LIMIT = "3";
 process.env.HA_GATEKEEPER_ADDON = "true";
 process.env.ADDON_EXPOSE_API = "false";
 process.env.SUPERVISOR_TOKEN = "supervisor-test-token";
@@ -39,7 +40,7 @@ const disabled = await createTokenAccess(prisma, {
   status: "disabled",
   permissions: [{ kind: "state", entityIds: ["sensor.temperature"] }]
 });
-const headers = { authorization: `Bearer ${apiKey}` };
+const headers = { authorization: `Bearer ${apiKey}`, "cf-connecting-ip": "203.0.113.1" };
 
 after(async () => {
   await tunnel.close();
@@ -62,18 +63,18 @@ test("tunnel rejects missing, invalid, and disabled bearer tokens", async () => 
   for (const token of [undefined, "invalid-key", disabled.apiKey]) {
     const response = await tunnel.inject({
       url: "/api/capabilities",
-      headers: token ? { authorization: `Bearer ${token}` } : {}
+      headers: token ? { authorization: `Bearer ${token}`, "cf-connecting-ip": "203.0.113.2" } : {"cf-connecting-ip": "203.0.113.2"}
     });
     assert.equal(response.statusCode, token === disabled.apiKey ? 403 : 401);
   }
 });
 
 test("tunnel enforces entity and service permissions before contacting Home Assistant", async () => {
-  const state = await tunnel.inject({ url: "/api/states/sensor.private", headers });
+  const state = await tunnel.inject({ url: "/api/states/sensor.private", headers: {...headers, "cf-connecting-ip": "203.0.113.3"} });
   assert.equal(state.statusCode, 403);
   assert.equal(state.json().error, "entity_not_allowed");
   const service = await tunnel.inject({
-    method: "POST", url: "/api/services/light/turn_on", headers,
+    method: "POST", url: "/api/services/light/turn_on", headers: {...headers, "cf-connecting-ip": "203.0.113.3"},
     payload: { entity_id: "light.living_room" }
   });
   assert.equal(service.statusCode, 403);
@@ -102,4 +103,52 @@ test("only authenticated administrators receive the public URL, never tunnel cre
   assert.equal(ingress.json().publicApiBaseUrl, "https://gatekeeper.example.com");
   assert.ok(!ingress.body.includes("private-tunnel-fixture"));
   assert.ok(!ingress.body.includes("supervisor-test-token"));
+});
+
+ test("rotating invalid tokens share CF IP budgets and capped calls append no audits", async () => {
+  const before = await prisma.auditLog.count();
+  for (let i = 0; i < 4; i++) {
+    const response = await tunnel.inject({url: "/api/capabilities", headers: {authorization: `Bearer rotating-${i}`, "cf-connecting-ip": "203.0.113.10"}});
+    assert.equal(response.statusCode, i < 3 ? 401 : 429);
+    if (i === 3) assert.deepEqual(response.json(), {ok: false, error: "rate_limited"});
+  }
+  assert.equal(await prisma.auditLog.count(), before + 3);
+  const rows = await prisma.auditLog.findMany({where: {ip: "203.0.113.10"}});
+  assert.equal(rows.length, 3);
+  const other = await tunnel.inject({url: "/api/capabilities", headers: {"cf-connecting-ip": "203.0.113.11"}});
+  assert.equal(other.statusCode, 401);
+  assert.equal(await prisma.auditLog.count({where: {ip: "203.0.113.11"}}), 1);
+});
+
+ test("untrusted tunnel peers ignore CF and Ingress headers", async () => {
+  const response = await tunnel.inject({url: "/api/capabilities", remoteAddress: "192.0.2.50", headers: {"cf-connecting-ip": "203.0.113.50", "x-ingress-path": "/api/hassio_ingress/forged"}});
+  assert.equal(response.statusCode, 401);
+  assert.equal(await prisma.auditLog.count({where: {ip: "192.0.2.50"}}), 1);
+});
+
+ test("malformed or absent CF identity falls back to one normalized loopback budget", async () => {
+  const isolated = createTunnelApi(publicApiRoutes);
+  try {
+    const before = await prisma.auditLog.count({where: {ip: "127.0.0.1"}});
+    for (const [i, header] of [undefined, "invalid", "203.0.113.1,203.0.113.2", ""].entries()) {
+      const response = await isolated.inject({url: "/api/capabilities", remoteAddress: i % 2 ? "::ffff:127.0.0.1" : "127.0.0.1", headers: header === undefined ? {} : {"cf-connecting-ip": header}});
+      assert.equal(response.statusCode, i < 3 ? 401 : 429);
+    }
+    assert.equal(await prisma.auditLog.count({where: {ip: "127.0.0.1"}}), before + 3);
+  } finally {await isolated.close();}
+});
+
+test("scoped CF headers charge fallback IP budget without server errors", async () => {
+  const isolated = createTunnelApi(publicApiRoutes);
+  try {
+    const before = await prisma.auditLog.count({where: {ip: "127.0.0.1"}});
+    for (let i = 0; i < 4; i++) {
+      const response = await isolated.inject({url: "/api/capabilities", headers: {
+        authorization: `Bearer scoped-invalid-${i}`, "cf-connecting-ip": `fe80::${i + 1}%eth0`
+      }});
+      assert.equal(response.statusCode, i < 3 ? 401 : 429);
+      if (i === 3) assert.deepEqual(response.json(), {ok: false, error: "rate_limited"});
+    }
+    assert.equal(await prisma.auditLog.count({where: {ip: "127.0.0.1"}}), before + 3);
+  } finally {await isolated.close();}
 });

@@ -6,6 +6,7 @@ const logLevelSchema = z.enum(["trace", "debug", "info", "warn", "error", "fatal
 export type RuntimeConfig = {
   NODE_ENV: z.infer<typeof nodeEnvSchema>;
   PORT: number;
+  PUBLIC_API_IP_RATE_LIMIT: number;
   DATABASE_URL: string;
   HA_BASE_URL: string;
   HA_TOKEN: string;
@@ -24,6 +25,7 @@ export type RuntimeConfig = {
 
 const commonSchema = z.object({
   NODE_ENV: nodeEnvSchema,
+  PUBLIC_API_IP_RATE_LIMIT: z.coerce.number().int().positive().default(300),
   PORT: z.coerce.number().int().positive().default(8080),
   DATABASE_URL: z.string().default("file:./prisma/dev.db"),
   ADMIN_SESSION_SECRET: z.string().trim().min(8),
@@ -56,6 +58,7 @@ export function resolveRuntimeConfig(raw: Record<string, string | undefined>): R
       ...tunnel,
       NODE_ENV: parsed.NODE_ENV,
       PORT: parsed.PORT,
+      PUBLIC_API_IP_RATE_LIMIT: parsed.PUBLIC_API_IP_RATE_LIMIT,
       DATABASE_URL: parsed.DATABASE_URL,
       HA_BASE_URL: "http://supervisor/core",
       HA_TOKEN: parsed.SUPERVISOR_TOKEN,
@@ -76,6 +79,7 @@ export function resolveRuntimeConfig(raw: Record<string, string | undefined>): R
     ...tunnel,
     NODE_ENV: parsed.NODE_ENV,
     PORT: parsed.PORT,
+      PUBLIC_API_IP_RATE_LIMIT: parsed.PUBLIC_API_IP_RATE_LIMIT,
     DATABASE_URL: parsed.DATABASE_URL,
     HA_BASE_URL: parsed.HA_BASE_URL,
     HA_TOKEN: parsed.HA_TOKEN,

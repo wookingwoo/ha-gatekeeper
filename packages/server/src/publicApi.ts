@@ -1,4 +1,4 @@
-import type { FastifyPluginAsync } from "fastify";
+import type { FastifyPluginAsync, preHandlerAsyncHookHandler } from "fastify";
 import rateLimit from "@fastify/rate-limit";
 import swagger from "@fastify/swagger";
 import swaggerUi from "@fastify/swagger-ui";
@@ -9,12 +9,20 @@ import { asServiceRequestBody, extractRequestedEntityIds } from "./policy.js";
 import { findAllowedServicePermission, findAllowedStatePermission } from "./permissions.js";
 import { getApiKeyPrefix, hashApiKey, timingSafeEqual } from "./security.js";
 import { buildCapabilitiesResponse } from "./capabilities.js";
-import { resolvePublicApiClient, readBearerToken, type PublicApiClient } from "./publicAuth.js";
+import { resolvePublicApiClient, type PublicApiClient, type PublicApiAuthResult } from "./publicAuth.js";
 import { isPublicApiAllowed } from "./adminAuth.js";
 import { logAudit } from "./audit.js";
 import { rateLimitErrorResponseBuilder } from "./rateLimit.js";
 
-const publicApiRateLimit = { max: 100, timeWindow: "1 minute" };
+import { resolvePublicIp } from "./publicIp.js";
+
+declare module "fastify" {
+  interface FastifyContextConfig { publicApiProtected?: boolean; }
+  interface FastifyRequest {
+    publicApiAuth: PublicApiAuthResult | null;
+    publicApiIp: string;
+  }
+}
 
 async function findClientByApiKey(apiKey: string): Promise<PublicApiClient | null> {
   const prefix = getApiKeyPrefix(apiKey);
@@ -32,7 +40,7 @@ function getAuthorizationHeader(headers: Record<string, string | string[] | unde
   return Array.isArray(authorization) ? authorization[0] : authorization;
 }
 
-export type PublicApiOptions = { exposeApi?: boolean };
+export type PublicApiOptions = { exposeApi?: boolean; tunnelListener?: boolean };
 
 export const publicApiRoutes: FastifyPluginAsync<PublicApiOptions> = async (app, options) => {
   app.addHook("onRequest", async (request, reply) => {
@@ -78,22 +86,48 @@ export const publicApiRoutes: FastifyPluginAsync<PublicApiOptions> = async (app,
     }
   });
 
-  // Keyed by bearer-token prefix (not raw IP) so distinct API clients behind the same
-  // NAT/router get independent buckets. Falls back to IP only when no token is present at all.
+  app.decorateRequest("publicApiAuth", null);
+  app.decorateRequest("publicApiIp", "");
+  // Separate plugin scopes give the two limits independent stores and run markers.
+  let ipLimit!: preHandlerAsyncHookHandler;
+  await app.register(async (ipScope) => {
+    await ipScope.register(rateLimit, {
+      global: false,
+      max: env.PUBLIC_API_IP_RATE_LIMIT,
+      timeWindow: "1 minute",
+      keyGenerator: (request) => request.publicApiIp,
+      errorResponseBuilder: rateLimitErrorResponseBuilder
+    });
+    ipLimit = ipScope.rateLimit();
+  });
   await app.register(rateLimit, {
     global: false,
-    keyGenerator: (request) => {
-      const authorization = getAuthorizationHeader(request.headers);
-      const token = readBearerToken(authorization);
-      return token ? `token:${getApiKeyPrefix(token)}` : `ip:${request.ip}`;
-    },
+    max: 100,
+    timeWindow: "1 minute",
+    keyGenerator: (request) => request.publicApiAuth!.ok ? request.publicApiAuth!.client.id : "",
     errorResponseBuilder: rateLimitErrorResponseBuilder
+  });
+  const clientLimit = app.rateLimit();
+  app.addHook("onRequest", async (request, reply) => {
+    if (!request.routeOptions.config.publicApiProtected) return;
+    request.publicApiIp = resolvePublicIp(request.raw.socket.remoteAddress ?? request.ip,
+      request.headers["cf-connecting-ip"], options.tunnelListener === true);
+    try {
+      await ipLimit.call(app, request, reply);
+      request.publicApiAuth = await resolvePublicApiClient(getAuthorizationHeader(request.headers), findClientByApiKey);
+      if (request.publicApiAuth.ok) await clientLimit.call(app, request, reply);
+    } catch (error) {
+      if ((error as { statusCode?: number }).statusCode === 429) {
+        return reply.status(429).send({ ok: false, error: "rate_limited" });
+      }
+      throw error;
+    }
   });
 
   app.get(
     "/capabilities",
     {
-      config: { rateLimit: publicApiRateLimit },
+      config: { publicApiProtected: true },
       schema: {
         tags: ["Gatekeeper API"],
         summary: "List the service calls and state reads this token is allowed to perform",
@@ -138,9 +172,8 @@ export const publicApiRoutes: FastifyPluginAsync<PublicApiOptions> = async (app,
       }
     },
     async (request, reply) => {
-    const authorization = getAuthorizationHeader(request.headers);
-    const auth = await resolvePublicApiClient(authorization, findClientByApiKey);
-    const ip = request.ip ?? null;
+    const auth = request.publicApiAuth!;
+    const ip = request.publicApiIp;
 
     if (!auth.ok) {
       await logAudit(request.log, {
@@ -168,7 +201,7 @@ export const publicApiRoutes: FastifyPluginAsync<PublicApiOptions> = async (app,
   app.post(
     "/services/:domain/:service",
     {
-      config: { rateLimit: publicApiRateLimit },
+      config: { publicApiProtected: true },
       schema: {
         tags: ["Gatekeeper API"],
         summary: "Call a Home Assistant service, scoped to this token's allowed entities",
@@ -214,10 +247,9 @@ export const publicApiRoutes: FastifyPluginAsync<PublicApiOptions> = async (app,
     async (request, reply) => {
       const { domain, service } = request.params as { domain: string; service: string };
       const actionIdRaw = `${domain}.${service}`;
-      const ip = request.ip ?? null;
+      const ip = request.publicApiIp;
 
-      const authorization = getAuthorizationHeader(request.headers);
-      const auth = await resolvePublicApiClient(authorization, findClientByApiKey);
+      const auth = request.publicApiAuth!;
 
       if (!auth.ok) {
         await logAudit(request.log, {
@@ -316,7 +348,7 @@ export const publicApiRoutes: FastifyPluginAsync<PublicApiOptions> = async (app,
   app.get(
     "/states/:entityId",
     {
-      config: { rateLimit: publicApiRateLimit },
+      config: { publicApiProtected: true },
       schema: {
         tags: ["Gatekeeper API"],
         summary: "Read a single entity's state, if this token is allowed to read it",
@@ -338,10 +370,9 @@ export const publicApiRoutes: FastifyPluginAsync<PublicApiOptions> = async (app,
     async (request, reply) => {
     const { entityId } = request.params as { entityId: string };
     const actionIdRaw = `states.${entityId}`;
-    const ip = request.ip ?? null;
+    const ip = request.publicApiIp;
 
-    const authorization = getAuthorizationHeader(request.headers);
-    const auth = await resolvePublicApiClient(authorization, findClientByApiKey);
+    const auth = request.publicApiAuth!;
 
     if (!auth.ok) {
       await logAudit(request.log, {

@@ -20,7 +20,7 @@ export function createTunnelApi(
       return reply.status(404).send({ ok: false, error: "not_found" });
     }
   });
-  app.register(publicRoutes, { prefix: "/api", exposeApi: true });
+  app.register(publicRoutes, { prefix: "/api", exposeApi: true, tunnelListener: true });
   app.setNotFoundHandler((_request, reply) =>
     reply.status(404).send({ ok: false, error: "not_found" })
   );

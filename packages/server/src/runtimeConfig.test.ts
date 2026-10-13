@@ -100,6 +100,7 @@ test("standalone mode resolves HA config, admin secrets, CORS origin, and port",
     ADDON_EXPOSE_API: false,
     LOG_LEVEL: "debug",
     AUDIT_LOG_RETENTION_DAYS: 90,
+    PUBLIC_API_IP_RATE_LIMIT: 300,
     CLOUDFLARE_TUNNEL_ENABLED: false,
     CLOUDFLARE_TUNNEL_TOKEN: "",
     CLOUDFLARE_PUBLIC_URL: ""
@@ -189,4 +190,12 @@ test("add-on mode throws if SUPERVISOR_TOKEN is missing", () => {
       }),
     /SUPERVISOR_TOKEN/
   );
+});
+
+ test("public IP budget defaults to 300 and validates positive integers", () => {
+  assert.equal(resolveRuntimeConfig(validStandaloneEnv).PUBLIC_API_IP_RATE_LIMIT, 300);
+  assert.equal(resolveRuntimeConfig({...validStandaloneEnv, PUBLIC_API_IP_RATE_LIMIT: "7"}).PUBLIC_API_IP_RATE_LIMIT, 7);
+  for (const value of ["0", "-1", "1.5", "NaN", ""]) {
+    assert.throws(() => resolveRuntimeConfig({...validStandaloneEnv, PUBLIC_API_IP_RATE_LIMIT: value}), /PUBLIC_API_IP_RATE_LIMIT/);
+  }
 });
