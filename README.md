@@ -15,9 +15,12 @@ A single-container API gateway for Home Assistant that issues limited, audited b
 
 ## Screenshots
 
-![Admin Dashboard (placeholder)](docs/assets/screenshot-admin-dashboard.png)
+![Admin dashboard](docs/assets/screenshot-admin-dashboard.png)
 
-Placeholder image. Replace this file with a real screenshot when ready.
+The access console includes a guided permission composer, searchable token and
+activity views, and light and dark themes. The layout adapts to mobile screens,
+with keyboard focus states and clear loading, error, and empty-state feedback.
+The screenshot uses demonstration entities and tokens.
 
 ## Home Assistant Add-on
 

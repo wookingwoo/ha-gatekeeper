@@ -3,32 +3,35 @@ import { cva, type VariantProps } from "class-variance-authority";
 import { cn } from "../../lib/utils";
 
 const buttonVariants = cva(
-  "inline-flex items-center justify-center gap-2 rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--primary)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--background)] disabled:pointer-events-none disabled:opacity-50",
+  "inline-flex shrink-0 items-center justify-center gap-2 rounded-lg text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--primary)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--background)] disabled:pointer-events-none disabled:opacity-50",
   {
     variants: {
       variant: {
-        default: "bg-[var(--primary)] text-[var(--primary-foreground)] hover:bg-[var(--primary-hover)]",
+        default:
+          "bg-[var(--primary)] text-[var(--primary-foreground)] hover:bg-[var(--primary-hover)]",
         secondary:
           "border border-[var(--border)] bg-[var(--surface)] text-[var(--foreground)] hover:bg-[var(--surface-muted)]",
-        ghost: "bg-transparent text-[var(--muted)] hover:bg-[var(--surface-muted)] hover:text-[var(--foreground)]",
+        ghost:
+          "bg-transparent text-[var(--muted)] hover:bg-[var(--surface-muted)] hover:text-[var(--foreground)]",
         danger:
-          "border border-[var(--danger-border)] bg-[var(--danger-soft)] text-[var(--danger)] hover:bg-[var(--danger-border)]"
+          "border border-[var(--danger-border)] bg-[var(--danger-soft)] text-[var(--danger)] hover:bg-[var(--danger-border)]",
       },
       size: {
-        default: "h-10 px-4 py-2",
-        sm: "h-8 px-3",
-        lg: "h-12 px-5"
-      }
+        default: "min-h-11 px-4 py-2.5",
+        sm: "min-h-9 px-3 py-2 text-xs",
+        lg: "h-12 px-5",
+      },
     },
     defaultVariants: {
       variant: "default",
-      size: "default"
-    }
-  }
+      size: "default",
+    },
+  },
 );
 
 export interface ButtonProps
-  extends React.ButtonHTMLAttributes<HTMLButtonElement>,
+  extends
+    React.ButtonHTMLAttributes<HTMLButtonElement>,
     VariantProps<typeof buttonVariants> {}
 
 const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
@@ -40,7 +43,7 @@ const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
         {...props}
       />
     );
-  }
+  },
 );
 Button.displayName = "Button";
 

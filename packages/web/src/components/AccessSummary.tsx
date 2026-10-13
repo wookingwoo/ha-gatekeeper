@@ -1,5 +1,6 @@
 import type { PermissionGroup } from "../lib/permissionGroups";
 import { buildAccessSummary } from "../lib/permissionGroups";
+import { Icon } from "./Icon";
 import { Button } from "./ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "./ui/card";
 
@@ -16,54 +17,94 @@ export function AccessSummary({
   canSubmit,
   isSubmitting,
   submitLabel,
-  onSubmit
+  onSubmit,
 }: AccessSummaryProps) {
   const summary = buildAccessSummary(groups);
-  const lines =
-    summary.lines.length > 0
-      ? summary.lines
-      : ["Select at least one service target or state read before issuing a token."];
-
   return (
-    <Card className="sticky top-5">
-      <CardHeader className="p-5 pb-3">
+    <Card className="self-start border-[var(--primary-border)] xl:sticky xl:top-6">
+      <CardHeader>
+        <div className="mb-2 flex items-center justify-between">
+          <div className="icon-tile">
+            <Icon name="shield" />
+          </div>
+          <span className="eyebrow">Your access, at a glance</span>
+        </div>
         <CardTitle>Access summary</CardTitle>
-        <p className="text-sm text-[var(--muted)]">Review before issuing. Tokens are shown once.</p>
+        <p className="text-xs leading-relaxed text-[var(--muted)]">
+          A small key. Only the doors you choose.
+        </p>
       </CardHeader>
-      <CardContent className="space-y-4 p-5 pt-0">
-        <div className="grid grid-cols-3 gap-2">
-          <div className="rounded-md border border-[var(--border)] bg-[var(--surface-muted)] p-3">
-            <p className="text-lg font-semibold">{summary.domainCount}</p>
-            <p className="text-xs text-[var(--muted)]">Domains</p>
-          </div>
-          <div className="rounded-md border border-[var(--border)] bg-[var(--surface-muted)] p-3">
-            <p className="text-lg font-semibold">{summary.serviceCount}</p>
-            <p className="text-xs text-[var(--muted)]">Services</p>
-          </div>
-          <div className="rounded-md border border-[var(--border)] bg-[var(--surface-muted)] p-3">
-            <p className="text-lg font-semibold">{summary.entityCount}</p>
-            <p className="text-xs text-[var(--muted)]">Entities</p>
-          </div>
+      <CardContent className="space-y-5">
+        <div className="grid grid-cols-3 divide-x divide-[var(--border)] rounded-xl border border-[var(--border)] bg-[var(--surface-muted)] py-4 text-center">
+          {[
+            { value: summary.domainCount, label: "Domains" },
+            { value: summary.serviceCount, label: "Services" },
+            { value: summary.entityCount, label: "Entities" },
+          ].map((stat) => (
+            <div key={stat.label}>
+              <p className="text-2xl font-semibold tracking-tight">
+                {stat.value}
+              </p>
+              <p className="mt-1 text-[10px] text-[var(--muted)]">
+                {stat.label}
+              </p>
+            </div>
+          ))}
         </div>
-
-        <div className="space-y-2 text-sm">
-          <p className="font-medium">Token can</p>
-          <ul className="space-y-2 text-[var(--muted)]">
-            {lines.map((line) => (
-              <li key={line} className="rounded-md bg-[var(--surface-muted)] px-3 py-2">
-                {line}
-              </li>
-            ))}
-          </ul>
+        <div className="text-sm">
+          <p className="mb-3 text-xs font-semibold">This token can</p>
+          {summary.lines.length ? (
+            <ul className="space-y-3 text-xs leading-relaxed text-[var(--muted)]">
+              {summary.lines.map((line) => (
+                <li key={line} className="flex items-start gap-2">
+                  <Icon
+                    name="check"
+                    size={15}
+                    className="mt-0.5 shrink-0 text-[var(--primary)]"
+                  />
+                  <span>{line}</span>
+                </li>
+              ))}
+            </ul>
+          ) : (
+            <p className="text-xs leading-relaxed text-[var(--muted)]">
+              Select services and entities to build your access rules.
+            </p>
+          )}
         </div>
-
-        <div className="rounded-md border border-[var(--warning-border)] bg-[var(--warning-soft)] p-3 text-xs text-[var(--warning)]">
-          Area, device, floor, and label targets are blocked before requests reach Home Assistant.
+        <div className="flex items-start gap-2.5 rounded-xl bg-[var(--surface-muted)] p-3.5 text-[11px] leading-relaxed text-[var(--muted)]">
+          <Icon name="lock" size={15} className="mt-0.5 shrink-0" />
+          <p>
+            Area, device, floor, and label targets are blocked before requests
+            reach Home Assistant.
+          </p>
         </div>
-
-        <Button className="w-full" disabled={!canSubmit || isSubmitting} onClick={onSubmit}>
-          {isSubmitting ? "Working..." : submitLabel}
-        </Button>
+        <div className="space-y-3 border-t border-[var(--border)] pt-5">
+          <Button
+            className="w-full"
+            disabled={!canSubmit || isSubmitting}
+            onClick={onSubmit}
+          >
+            {isSubmitting ? (
+              <>
+                <span className="loading-spinner" />
+                Issuing token…
+              </>
+            ) : (
+              <>
+                {submitLabel}
+                <Icon name="arrow" size={16} />
+              </>
+            )}
+          </Button>
+          <p className="text-center text-[10px] leading-relaxed text-[var(--muted)]">
+            {canSubmit
+              ? "Ready to issue. Copy your token when it appears."
+              : "Name your token and complete every permission group."}
+            <br />
+            Tokens are shown only once.
+          </p>
+        </div>
       </CardContent>
     </Card>
   );

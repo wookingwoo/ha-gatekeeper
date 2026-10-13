@@ -1,6 +1,7 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useId, useMemo, useRef, useState } from "react";
 import { cn } from "../lib/utils";
 import { Input } from "./ui/input";
+import { Icon } from "./Icon";
 
 type MultiSelectOption = {
   value: string;
@@ -27,10 +28,11 @@ export function SearchableMultiSelect({
   searchPlaceholder = "Search...",
   emptyText = "No results",
   disabled,
-  className
+  className,
 }: SearchableMultiSelectProps) {
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
+  const panelId = useId();
   const panelRef = useRef<HTMLDivElement | null>(null);
   const triggerRef = useRef<HTMLButtonElement | null>(null);
 
@@ -40,9 +42,10 @@ export function SearchableMultiSelect({
     if (!query.trim()) return options;
     const lowered = query.trim().toLowerCase();
     return options.filter((option) => {
-      const haystack = `${option.label} ${option.value} ${option.description ?? ""}`
-        .trim()
-        .toLowerCase();
+      const haystack =
+        `${option.label} ${option.value} ${option.description ?? ""}`
+          .trim()
+          .toLowerCase();
       return haystack.includes(lowered);
     });
   }, [options, query]);
@@ -67,7 +70,10 @@ export function SearchableMultiSelect({
 
     function handleClick(event: MouseEvent) {
       const target = event.target as Node;
-      if (panelRef.current?.contains(target) || triggerRef.current?.contains(target)) {
+      if (
+        panelRef.current?.contains(target) ||
+        triggerRef.current?.contains(target)
+      ) {
         return;
       }
       setOpen(false);
@@ -89,7 +95,7 @@ export function SearchableMultiSelect({
   }, [open]);
 
   const triggerBase =
-    "h-10 w-full rounded-md border border-[var(--border)] bg-[var(--surface)] px-3 text-left text-sm text-[var(--foreground)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--primary)] disabled:cursor-not-allowed disabled:opacity-60";
+    "relative h-11 w-full rounded-lg border border-[var(--border)] bg-[var(--surface)] pl-3.5 pr-9 text-left text-sm text-[var(--foreground)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--primary)] disabled:cursor-not-allowed disabled:opacity-60";
 
   return (
     <div className={cn("relative", className)}>
@@ -99,25 +105,35 @@ export function SearchableMultiSelect({
         className={triggerBase}
         onClick={() => setOpen((prev) => !prev)}
         disabled={disabled}
-        aria-haspopup="listbox"
+        aria-haspopup="dialog"
         aria-expanded={open}
+        aria-controls={open ? panelId : undefined}
       >
-        <span className={cn("block truncate", values.length === 0 && "text-[var(--muted)]")}>
+        <span
+          className={cn(
+            "block truncate",
+            values.length === 0 && "text-[var(--muted)]",
+          )}
+        >
           {triggerText}
         </span>
         <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-xs text-[var(--muted)]">
-          v
+          <Icon name="chevron" size={15} />
         </span>
       </button>
 
       {open ? (
         <div
           ref={panelRef}
-          className="absolute z-50 mt-2 w-full rounded-md border border-[var(--border)] bg-[var(--surface)] shadow-xl"
+          id={panelId}
+          role="dialog"
+          aria-label={`${placeholder} options`}
+          className="absolute z-50 mt-2 w-full rounded-xl border border-[var(--border)] bg-[var(--surface)] shadow-xl"
         >
           <div className="border-b border-[var(--border)] p-2">
             <Input
               autoFocus
+              aria-label={searchPlaceholder}
               value={query}
               onChange={(event) => setQuery(event.target.value)}
               placeholder={searchPlaceholder}
@@ -136,7 +152,9 @@ export function SearchableMultiSelect({
           </div>
           <div className="max-h-64 overflow-auto p-1 text-sm">
             {filtered.length === 0 ? (
-              <div className="px-3 py-2 text-xs text-[var(--muted)]">{emptyText}</div>
+              <div className="px-3 py-2 text-xs text-[var(--muted)]">
+                {emptyText}
+              </div>
             ) : (
               filtered.map((option) => {
                 const selected = valueSet.has(option.value);
@@ -145,9 +163,11 @@ export function SearchableMultiSelect({
                     key={option.value}
                     type="button"
                     className={cn(
-                      "flex w-full items-start gap-3 rounded-md px-3 py-2 text-left text-[var(--foreground)] hover:bg-[var(--surface-muted)]",
-                      selected && "bg-[var(--primary-soft)] text-[var(--primary)]"
+                      "flex min-h-11 w-full items-start gap-3 rounded-lg px-3 py-2.5 text-left text-[var(--foreground)] hover:bg-[var(--surface-muted)]",
+                      selected &&
+                        "bg-[var(--primary-soft)] text-[var(--primary)]",
                     )}
+                    aria-pressed={selected}
                     onClick={() => {
                       const next = selected
                         ? values.filter((value) => value !== option.value)
@@ -158,15 +178,18 @@ export function SearchableMultiSelect({
                     <span
                       className={cn(
                         "mt-0.5 flex h-4 w-4 items-center justify-center rounded border border-[var(--border)] text-[10px]",
-                        selected && "border-[var(--primary-border)] bg-[var(--primary-soft)] text-[var(--primary)]"
+                        selected &&
+                          "border-[var(--primary-border)] bg-[var(--primary-soft)] text-[var(--primary)]",
                       )}
                     >
-                      {selected ? "v" : ""}
+                      {selected ? <Icon name="check" size={12} /> : null}
                     </span>
-                    <span className="flex flex-col">
+                    <span className="flex min-w-0 flex-col break-words [overflow-wrap:anywhere]">
                       <span>{option.label}</span>
                       {option.description ? (
-                        <span className="text-xs text-[var(--muted)]">{option.description}</span>
+                        <span className="text-xs text-[var(--muted)]">
+                          {option.description}
+                        </span>
                       ) : null}
                     </span>
                   </button>
