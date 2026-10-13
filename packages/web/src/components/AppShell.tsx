@@ -36,7 +36,7 @@ export function AppShell({
           <div className="flex flex-wrap items-center gap-3">
             <div className="mr-auto min-w-0 xl:mr-2">
               <h1 className="text-lg font-semibold">ha-gatekeeper</h1>
-              <p className="text-[11px] text-[var(--muted)] sm:text-xs">Home Assistant access console</p>
+              <p className="text-xs text-[var(--muted)] sm:text-xs">Home Assistant access console</p>
             </div>
             <nav aria-label="Primary navigation"
               className="order-3 grid w-full grid-cols-3 gap-2 xl:order-none xl:flex xl:w-auto">

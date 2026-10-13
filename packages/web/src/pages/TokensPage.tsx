@@ -269,7 +269,7 @@ export function TokensPage({
                         <p className="mt-2 text-xs text-[var(--muted)]">
                           {summarizeClient(client)}
                         </p>
-                        <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-[10px] text-[var(--muted)]">
+                        <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-[var(--muted)]">
                           <code className="rounded bg-[var(--surface-muted)] px-1.5 py-0.5">
                             {client.apiKeyPrefix}…
                           </code>
@@ -415,13 +415,13 @@ export function TokensPage({
                 onChange={(event) => setBundleBaseUrl(event.target.value)}
                 placeholder="http://homeassistant.local:4283"
               />
-              <p className="text-[11px] leading-relaxed text-[var(--muted)]">
+              <p className="text-xs leading-relaxed text-[var(--muted)]">
                 Bundles from this list use a placeholder token. Add your saved
                 bearer token after downloading.
               </p>
             </div>
           </details>
-          <p role="status" className="mt-4 text-[10px] text-[var(--muted)]">
+          <p role="status" className="mt-4 text-xs text-[var(--muted)]">
             Showing {visible.length} of {clients.length} tokens
           </p>
         </CardContent>

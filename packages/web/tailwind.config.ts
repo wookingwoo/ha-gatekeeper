@@ -6,8 +6,8 @@ export default {
   theme: {
     extend: {
       fontFamily: {
-        display: ["Space Grotesk", "ui-sans-serif", "system-ui"],
-        body: ["IBM Plex Sans", "ui-sans-serif", "system-ui"]
+        display: ["Inter", "ui-sans-serif", "system-ui"],
+        body: ["Inter", "ui-sans-serif", "system-ui"]
       },
       colors: {
         ink: "#0f172a",

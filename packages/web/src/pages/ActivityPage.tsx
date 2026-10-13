@@ -194,7 +194,7 @@ export function ActivityPage({
                     <TableCell className="min-w-[140px] text-xs text-[var(--muted)]">
                       {log.error ?? (log.success ? "Passed policy check" : "—")}
                     </TableCell>
-                    <TableCell className="whitespace-nowrap font-mono text-[10px] text-[var(--muted)]">
+                    <TableCell className="whitespace-nowrap font-mono text-xs text-[var(--muted)]">
                       {log.ip ?? "—"}
                     </TableCell>
                   </TableRow>
@@ -202,7 +202,7 @@ export function ActivityPage({
               </TableBody>
             </Table>
           )}
-          <p role="status" className="mt-4 text-[10px] text-[var(--muted)]">
+          <p role="status" className="mt-4 text-xs text-[var(--muted)]">
             Showing {visible.length} of {logs.length} recent requests
           </p>
         </CardContent>

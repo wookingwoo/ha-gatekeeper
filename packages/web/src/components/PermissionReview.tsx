@@ -26,7 +26,7 @@ export function PermissionReview({
             <h4 className="text-sm font-semibold">
               {group.kind === "state" ? "State reads" : group.domain}
             </h4>
-            <span className="ml-auto text-[10px] text-[var(--muted)]">
+            <span className="ml-auto text-xs text-[var(--muted)]">
               {group.entityIds.length}{" "}
               {group.entityIds.length === 1 ? "entity" : "entities"}
             </span>
@@ -36,14 +36,14 @@ export function PermissionReview({
               {group.services.map((service) => (
                 <code
                   key={service}
-                  className="rounded-md border border-[var(--primary-border)] bg-[var(--primary-soft)] px-2.5 py-1.5 text-[10px] text-[var(--primary)]"
+                  className="rounded-md border border-[var(--primary-border)] bg-[var(--primary-soft)] px-2.5 py-1.5 text-xs text-[var(--primary)]"
                 >
                   {group.domain}.{service}
                 </code>
               ))}
             </div>
           ) : (
-            <p className="mb-3 text-[11px] text-[var(--muted)]">
+            <p className="mb-3 text-xs text-[var(--muted)]">
               Read-only access to these entity states.
             </p>
           )}
@@ -59,7 +59,7 @@ export function PermissionReview({
                   <p className="break-words font-medium">
                     {entityNames.get(entityId) || entityId}
                   </p>
-                  <code className="mt-0.5 block break-all text-[10px] text-[var(--muted)]">
+                  <code className="mt-0.5 block break-all text-xs text-[var(--muted)]">
                     {entityId}
                   </code>
                 </div>
@@ -67,7 +67,7 @@ export function PermissionReview({
             ))}
           </ul>
           {group.kind === "service" && group.allowNoEntity ? (
-            <p className="mt-3 flex items-start gap-2 rounded-lg bg-[var(--warning-soft)] p-3 text-[11px] text-[var(--warning)]">
+            <p className="mt-3 flex items-start gap-2 rounded-lg bg-[var(--warning-soft)] p-3 text-xs text-[var(--warning)]">
               <Icon name="alert" size={14} className="mt-0.5 shrink-0" />
               Calls without an entity target are allowed for these services.
             </p>

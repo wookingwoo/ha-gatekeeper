@@ -11,7 +11,7 @@ export function ActivityTimeline({ logs }: { logs: AuditLog[] }) {
             <time
               dateTime={log.timestamp}
               title={new Date(log.timestamp).toLocaleString()}
-              className="text-[10px] text-[var(--muted)]"
+              className="text-xs text-[var(--muted)]"
             >
               {new Date(log.timestamp).toLocaleString(undefined, {
                 month: "short",
@@ -27,11 +27,11 @@ export function ActivityTimeline({ logs }: { logs: AuditLog[] }) {
           <p className="break-all font-mono text-xs font-medium">
             {log.actionIdRaw}
           </p>
-          <p className="mt-1.5 break-words text-[11px] text-[var(--muted)] [overflow-wrap:anywhere]">
+          <p className="mt-1.5 break-words text-xs text-[var(--muted)] [overflow-wrap:anywhere]">
             {log.clientName ?? "Unknown token"}
           </p>
           <details className="group mt-2">
-            <summary className="flex min-h-9 cursor-pointer list-none items-center gap-1.5 text-[10px] font-semibold text-[var(--muted)]">
+            <summary className="flex min-h-9 cursor-pointer list-none items-center gap-1.5 text-xs font-semibold text-[var(--muted)]">
               Request details
               <Icon
                 name="chevron"
@@ -39,7 +39,7 @@ export function ActivityTimeline({ logs }: { logs: AuditLog[] }) {
                 className="transition-transform group-open:rotate-180"
               />
             </summary>
-            <dl className="grid grid-cols-[60px_minmax(0,1fr)] gap-x-3 gap-y-2 rounded-lg bg-[var(--surface-muted)] p-3 text-[10px]">
+            <dl className="grid grid-cols-[60px_minmax(0,1fr)] gap-x-3 gap-y-2 rounded-lg bg-[var(--surface-muted)] p-3 text-xs">
               <dt className="text-[var(--muted)]">Reason</dt>
               <dd className="break-words [overflow-wrap:anywhere]">
                 {log.error ?? (log.success ? "Passed policy check" : "—")}

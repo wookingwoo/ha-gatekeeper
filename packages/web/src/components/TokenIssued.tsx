@@ -102,7 +102,7 @@ export function TokenIssued({
                 <summary className="cursor-pointer text-xs font-semibold">
                   Example request
                 </summary>
-                <pre className="my-4 overflow-auto rounded-lg bg-[var(--surface-muted)] p-4 text-[10px] leading-relaxed">
+                <pre className="my-4 overflow-auto rounded-lg bg-[var(--surface-muted)] p-4 text-xs leading-relaxed">
                   {curl}
                 </pre>
                 <CopyButton
@@ -114,7 +114,7 @@ export function TokenIssued({
             ) : null}
           </div>
           <div className="setup-actions">
-            <p className="text-[11px] text-[var(--muted)]">
+            <p className="text-xs text-[var(--muted)]">
               One key. Only your rules.
             </p>
             <Button variant="secondary" onClick={onCreateAnother}>
@@ -151,7 +151,7 @@ export function TokenIssued({
             <Icon name="download" size={15} />
             Download agent setup bundle
           </Button>
-          <label className="mt-5 flex items-start gap-2.5 border-t border-[var(--border)] pt-4 text-[11px]">
+          <label className="mt-5 flex items-start gap-2.5 border-t border-[var(--border)] pt-4 text-xs">
             <input
               type="checkbox"
               className="mt-0.5"
@@ -160,7 +160,7 @@ export function TokenIssued({
             />
             <span>
               Include bearer token in bundle
-              <span className="mt-1 block text-[10px] leading-relaxed text-[var(--muted)]">
+              <span className="mt-1 block text-xs leading-relaxed text-[var(--muted)]">
                 Off by default. Your bundle will use a placeholder token.
               </span>
             </span>
@@ -168,7 +168,7 @@ export function TokenIssued({
           {includeToken ? (
             <p
               role="alert"
-              className="mt-4 rounded-lg border border-[var(--danger-border)] bg-[var(--danger-soft)] p-3 text-[11px] leading-relaxed text-[var(--danger)]"
+              className="mt-4 rounded-lg border border-[var(--danger-border)] bg-[var(--danger-soft)] p-3 text-xs leading-relaxed text-[var(--danger)]"
             >
               This bundle contains a live bearer token. Anyone with the zip can
               use its allowed actions until the token is rotated, disabled, or

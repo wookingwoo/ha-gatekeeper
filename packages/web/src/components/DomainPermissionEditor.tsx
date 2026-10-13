@@ -125,7 +125,7 @@ export function DomainPermissionEditor({
       <div className="flex min-w-0 flex-wrap items-center gap-2 sm:block sm:space-y-3">
         <div className="hidden items-center justify-between sm:flex">
           <p className="studio-label">Permission groups</p>
-          <span className="text-[10px] text-[var(--muted)]">
+          <span className="text-xs text-[var(--muted)]">
             {groups.length} {groups.length === 1 ? "group" : "groups"}
           </span>
         </div>
@@ -169,7 +169,7 @@ export function DomainPermissionEditor({
         <div className="flex shrink-0 flex-wrap gap-3">
           <button
             type="button"
-            className="flex min-h-10 min-w-10 items-center justify-center gap-1.5 text-[11px] font-semibold text-[var(--muted)] hover:text-[var(--foreground)] disabled:opacity-40"
+            className="flex min-h-10 min-w-10 items-center justify-center gap-1.5 text-xs font-semibold text-[var(--muted)] hover:text-[var(--foreground)] disabled:opacity-40"
             disabled={disabled || !availableDomains.length}
             aria-expanded={addingDomain}
             onClick={() => {
@@ -182,7 +182,7 @@ export function DomainPermissionEditor({
           </button>
           <button
             type="button"
-            className="flex min-h-10 items-center gap-1.5 text-[11px] font-semibold text-[var(--muted)] hover:text-[var(--foreground)] disabled:opacity-40"
+            className="flex min-h-10 items-center gap-1.5 text-xs font-semibold text-[var(--muted)] hover:text-[var(--foreground)] disabled:opacity-40"
             disabled={disabled || hasStateGroup}
             onClick={() => {
               pendingGroupFocus.current = true;
@@ -249,7 +249,7 @@ export function DomainPermissionEditor({
                   ? "State reads"
                   : selectedGroup.domain}
               </h3>
-              <p className="mt-1 hidden text-[11px] text-[var(--muted)] sm:block">
+              <p className="mt-1 hidden text-xs text-[var(--muted)] sm:block">
                 {selectedGroup.kind === "state"
                   ? "Read only the states you select."
                   : "Choose what this key can do, and where."}
@@ -276,7 +276,7 @@ export function DomainPermissionEditor({
                   serviceOptions.map((service) => (
                     <label
                       key={service}
-                      className={`flex min-h-10 cursor-pointer items-center gap-2 rounded-lg border px-3 py-2 text-[11px] ${selectedGroup.services.includes(service) ? "border-[var(--primary-border)] bg-[var(--primary-soft)] text-[var(--primary)]" : "border-[var(--border)] text-[var(--muted)]"}`}
+                      className={`flex min-h-10 cursor-pointer items-center gap-2 rounded-lg border px-3 py-2 text-xs ${selectedGroup.services.includes(service) ? "border-[var(--primary-border)] bg-[var(--primary-soft)] text-[var(--primary)]" : "border-[var(--border)] text-[var(--muted)]"}`}
                     >
                       <input
                         type="checkbox"
@@ -328,7 +328,7 @@ export function DomainPermissionEditor({
               open={selectedGroup.allowNoEntity || undefined}
               className="group border-t border-[var(--border)] pt-3"
             >
-              <summary className="flex min-h-8 cursor-pointer list-none items-center justify-between gap-2 text-[11px] text-[var(--muted)]">
+              <summary className="flex min-h-8 cursor-pointer list-none items-center justify-between gap-2 text-xs text-[var(--muted)]">
                 Advanced options
                 <Icon
                   name="chevron"
@@ -351,7 +351,7 @@ export function DomainPermissionEditor({
                 />
                 <span>
                   Allow service calls without an entity target
-                  <span className="mt-1 block text-[10px] leading-relaxed text-[var(--muted)]">
+                  <span className="mt-1 block text-xs leading-relaxed text-[var(--muted)]">
                     Only for services intentionally called without an entity.
                   </span>
                 </span>

@@ -177,7 +177,7 @@ export function SearchableMultiSelect({
                   >
                     <span
                       className={cn(
-                        "mt-0.5 flex h-4 w-4 items-center justify-center rounded border border-[var(--border)] text-[10px]",
+                        "mt-0.5 flex h-4 w-4 items-center justify-center rounded border border-[var(--border)] text-xs",
                         selected &&
                           "border-[var(--primary-border)] bg-[var(--primary-soft)] text-[var(--primary)]",
                       )}

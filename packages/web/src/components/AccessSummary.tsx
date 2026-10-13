@@ -23,7 +23,7 @@ export function AccessSummary({ groups, tokenName }: {
           ].map((stat) => (
             <div key={stat.label} className="rounded-lg border border-[var(--border)] bg-[var(--surface-muted)] px-3 py-4">
               <p className="text-2xl font-semibold">{stat.value}</p>
-              <p className="mt-1 text-[11px] text-[var(--muted)]">{stat.label}</p>
+              <p className="mt-1 text-xs text-[var(--muted)]">{stat.label}</p>
             </div>
           ))}
         </div>

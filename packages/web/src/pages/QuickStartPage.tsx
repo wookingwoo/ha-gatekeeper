@@ -123,7 +123,7 @@ export function QuickStartPage({
         <section className="studio-panel">
           <ol
             aria-label="Token setup steps"
-            className="flex items-center gap-5 border-b border-[var(--border)] px-4 py-2 sm:px-6"
+            className="flex items-center gap-2 border-b border-[var(--border)] px-4 py-2 sm:gap-5 sm:px-6"
           >
             <li
               className="setup-step"
@@ -173,7 +173,7 @@ export function QuickStartPage({
                 />
               </div>
               <div className="setup-actions">
-                <p className="text-[10px] leading-relaxed text-[var(--muted)]">
+                <p className="text-xs leading-relaxed text-[var(--muted)]">
                   {canSubmit
                     ? `${summary.entityCount} entities · ${summary.serviceCount} services selected`
                     : "Name your key and choose its access."}
@@ -217,7 +217,7 @@ export function QuickStartPage({
                   </div>
                 </div>
                 <PermissionReview groups={groups} entities={entities} />
-                <p className="flex items-start gap-2 border-t border-[var(--border)] pt-4 text-[11px] leading-relaxed text-[var(--muted)]">
+                <p className="flex items-start gap-2 border-t border-[var(--border)] pt-4 text-xs leading-relaxed text-[var(--muted)]">
                   <Icon name="lock" size={14} className="mt-0.5 shrink-0" />
                   Your token appears once. Keep it private. Area, device, floor,
                   and label targets remain blocked.
