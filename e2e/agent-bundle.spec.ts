@@ -1,4 +1,5 @@
 import { expect, type Page, test } from "@playwright/test";
+import { readFile } from "node:fs/promises";
 
 const client = {
   id: "client_1",
@@ -21,9 +22,9 @@ const client = {
   ]
 };
 
-async function mockAdminApi(page: Page): Promise<void> {
+async function mockAdminApi(page: Page, publicApiBaseUrl: string | null = null): Promise<void> {
   await page.route("**/admin/me", async (route) => {
-    await route.fulfill({ json: { ok: true, authenticated: true } });
+    await route.fulfill({ json: { ok: true, authenticated: true, publicApiBaseUrl } });
   });
   await page.route("**/admin/clients", async (route) => {
     await route.fulfill({ json: { ok: true, clients: [client] } });
@@ -58,6 +59,31 @@ async function mockAdminApi(page: Page): Promise<void> {
     await route.fulfill({ json: { ok: true, client, apiKey: "hgk_live_secret" } });
   });
 }
+
+test("configured tunnel URL flows from admin metadata into both bundle downloads", async ({ page }) => {
+  const publicUrl = "https://gatekeeper.example.com";
+  await mockAdminApi(page, publicUrl);
+  await page.goto("/");
+  await page.getByRole("button", { name: "Select entities" }).click();
+  await page.getByRole("button", { name: /Living Room/ }).click();
+  await page.keyboard.press("Escape");
+  await page.getByRole("button", { name: "Issue token" }).click();
+  await expect(page.getByLabel("Gatekeeper API base URL")).toHaveValue(publicUrl);
+  await expect(page.locator("pre")).toContainText(`${publicUrl}/api/services/light/turn_on`);
+  let downloadPromise = page.waitForEvent("download");
+  await page.getByRole("button", { name: "Download agent setup bundle" }).click();
+  let download = await downloadPromise;
+  expect(await readFile((await download.path())!, "utf8")).toContain(publicUrl);
+  await page.getByRole("button", { name: "Tokens" }).click();
+  await expect(page.getByLabel("Gatekeeper API base URL")).toHaveValue(publicUrl);
+  await page.getByLabel("Gatekeeper API base URL").fill("https://custom.example.com");
+  downloadPromise = page.waitForEvent("download");
+  await page.getByRole("button", { name: "Download bundle for Living Room Agent" }).click();
+  download = await downloadPromise;
+  const archive = await readFile((await download.path())!, "utf8");
+  expect(archive).toContain("https://custom.example.com");
+  expect(archive).not.toContain("hgk_live_secret");
+});
 
 test("issued token can download an agent setup bundle and opt into live-token warning", async ({
   page

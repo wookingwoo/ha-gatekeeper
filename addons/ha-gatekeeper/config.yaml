@@ -1,5 +1,5 @@
 name: HA Gatekeeper
-version: "0.2.0"
+version: "0.3.0"
 slug: ha_gatekeeper
 description: Scoped, audited Gatekeeper tokens for Home Assistant service access.
 url: https://github.com/wookingwoo/ha-gatekeeper
@@ -23,6 +23,11 @@ ports_description:
 options:
   expose_api: false
   log_level: info
+  cloudflare_tunnel_enabled: false
+  cloudflare_public_url: ""
 schema:
   expose_api: bool
   log_level: "list(trace|debug|info|warn|error|fatal)"
+  cloudflare_tunnel_enabled: bool
+  cloudflare_tunnel_token: "password?"
+  cloudflare_public_url: str

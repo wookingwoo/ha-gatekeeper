@@ -29,7 +29,28 @@ https://github.com/wookingwoo/ha-gatekeeper
 
 The add-on uses Home Assistant Ingress for the admin UI and the Supervisor API proxy for Home Assistant access, so add-on installs do not require a Home Assistant long-lived access token.
 
-The public Gatekeeper API port is disabled by default. To allow trusted LAN agents to call it directly, enable the `expose_api` add-on option, map container port `8080/tcp` in the Home Assistant **Network** section, and use a generated Gatekeeper bearer token.
+The LAN Gatekeeper API is disabled by default. To allow trusted LAN agents to call it directly, enable the `expose_api` add-on option, map container port `8080/tcp` in the Home Assistant **Network** section, and use a generated Gatekeeper bearer token.
+
+### Public HTTPS access with Cloudflare Tunnel
+
+The add-on includes an optional Cloudflare Tunnel connector. Outside callers can use a public HTTPS URL and a scoped Gatekeeper bearer token, without installing a VPN or opening router ports.
+
+1. Create a named, remotely managed Cloudflare Tunnel and a public hostname such as `gatekeeper.example.com`.
+2. Configure that hostname's service as **HTTP**, URL **`http://127.0.0.1:8081`**. This is the API-only listener inside the Gatekeeper container. Do not use the Ingress/admin port `8080`.
+3. In the Gatekeeper add-on options, set:
+
+   ```yaml
+   cloudflare_tunnel_enabled: true
+   cloudflare_tunnel_token: "<CLOUDFLARE_TUNNEL_CONNECTOR_TOKEN>"
+   cloudflare_public_url: "https://gatekeeper.example.com"
+   ```
+
+4. Restart the add-on. Leave `expose_api: false` unless you also want direct LAN API access. No host port mapping is needed for the tunnel.
+5. Issue scoped Gatekeeper tokens in the Ingress admin UI. The public URL is filled into request examples and agent setup bundles automatically.
+
+The tunnel listener exposes only capabilities, service calls and state reads; admin pages and Swagger documentation are not served there. Gatekeeper still authenticates and authorizes every API call. Cloudflare account/domain/hostname setup is required once; the add-on does not create those resources for you. The connector token is a secret for operating your tunnel and must never be given to API callers.
+
+See [the add-on documentation](addons/ha-gatekeeper/DOCS.md#cloudflare-tunnel) for setup and troubleshooting. The existing local stdio MCP adapter can use the public URL as `GATEKEEPER_BASE_URL`. An HTTP MCP endpoint for cloud-hosted MCP clients is not included.
 
 Add-on releases use prebuilt GHCR images at `ghcr.io/wookingwoo/ha-gatekeeper`, tagged by add-on version.
 

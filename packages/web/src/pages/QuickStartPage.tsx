@@ -9,7 +9,7 @@ import { Input } from "../components/ui/input";
 import { downloadAgentBundle, getDefaultGatekeeperBaseUrl } from "../lib/agentBundle";
 import { createDefaultGroups, groupsAreComplete, groupsToPermissions } from "../lib/permissionGroups";
 
-function makeCurl(permissions: TokenPermission[]): string {
+function makeCurl(permissions: TokenPermission[], baseUrl: string): string {
   const servicePermission = permissions.find(
     (permission): permission is Extract<TokenPermission, { kind: "service" }> =>
       permission.kind === "service"
@@ -17,7 +17,7 @@ function makeCurl(permissions: TokenPermission[]): string {
   if (servicePermission) {
     const entityId = servicePermission.entityIds[0] ?? "light.living_room";
     return [
-      `curl -X POST /api/services/${servicePermission.domain}/${servicePermission.services[0]}`,
+      `curl -X POST ${baseUrl}/api/services/${encodeURIComponent(servicePermission.domain)}/${encodeURIComponent(servicePermission.services[0])}`,
       `  -H "Authorization: Bearer <TOKEN>"`,
       `  -H "Content-Type: application/json"`,
       `  -d '{"entity_id":"${entityId}"}'`
@@ -32,7 +32,7 @@ function makeCurl(permissions: TokenPermission[]): string {
     return "";
   }
   return [
-    `curl /api/states/${statePermission.entityIds[0]}`,
+    `curl ${baseUrl}/api/states/${encodeURIComponent(statePermission.entityIds[0])}`,
     `  -H "Authorization: Bearer <TOKEN>"`
   ].join(" \\\n");
 }
@@ -46,7 +46,8 @@ export function QuickStartPage({
   onCreate,
   result,
   onClearResult,
-  isSubmitting
+  isSubmitting,
+  publicApiBaseUrl
 }: {
   entities: HaEntity[];
   services: HaServiceCatalog[];
@@ -57,12 +58,13 @@ export function QuickStartPage({
   result: QuickSetupResult | null;
   onClearResult: () => void;
   isSubmitting: boolean;
+  publicApiBaseUrl?: string | null;
 }) {
   const [name, setName] = useState("Mom access");
   const [groups, setGroups] = useState(createDefaultGroups);
   const [helpOpen, setHelpOpen] = useState(false);
   const [includeBearerTokenInBundle, setIncludeBearerTokenInBundle] = useState(false);
-  const [bundleBaseUrl, setBundleBaseUrl] = useState(() => getDefaultGatekeeperBaseUrl());
+  const [bundleBaseUrl, setBundleBaseUrl] = useState(() => getDefaultGatekeeperBaseUrl(undefined, publicApiBaseUrl));
   const [bundleError, setBundleError] = useState<string | null>(null);
 
   const permissions = useMemo(() => groupsToPermissions(groups), [groups]);
@@ -74,7 +76,7 @@ export function QuickStartPage({
     !hasEntityError;
 
   if (result) {
-    const curl = makeCurl(result.client.permissions);
+    const curl = makeCurl(result.client.permissions, bundleBaseUrl.trim().replace(/\/+$/, ""));
     const handleDownloadBundle = () => {
       setBundleError(null);
       try {

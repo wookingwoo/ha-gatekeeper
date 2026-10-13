@@ -2,6 +2,72 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import { resolveRuntimeConfig } from "./runtimeConfig.js";
 
+const tunnelAddonConfig = {
+  HA_GATEKEEPER_ADDON: "true",
+  SUPERVISOR_TOKEN: "supervisor-token",
+  ADMIN_SESSION_SECRET: "session-secret",
+  API_KEY_HASH_SECRET: "api-key-hash-secret"
+};
+
+test("Cloudflare Tunnel is disabled by default without changing LAN exposure", () => {
+  const config = resolveRuntimeConfig(tunnelAddonConfig);
+  assert.equal(config.CLOUDFLARE_TUNNEL_ENABLED, false);
+  assert.equal(config.CLOUDFLARE_PUBLIC_URL, "");
+  assert.equal(config.ADDON_EXPOSE_API, false);
+});
+
+test("enabled tunnel validates credentials and normalizes the public HTTPS origin", () => {
+  const config = resolveRuntimeConfig({
+    ...tunnelAddonConfig,
+    CLOUDFLARE_TUNNEL_ENABLED: "true",
+    CLOUDFLARE_TUNNEL_TOKEN: " tunnel-token ",
+    CLOUDFLARE_PUBLIC_URL: " https://gatekeeper.example.com/ "
+  });
+  assert.equal(config.CLOUDFLARE_TUNNEL_TOKEN, "tunnel-token");
+  assert.equal(config.CLOUDFLARE_PUBLIC_URL, "https://gatekeeper.example.com");
+  assert.equal(config.ADDON_EXPOSE_API, false);
+});
+
+test("enabled tunnel rejects missing credentials and unsafe public origins", () => {
+  const enabled = { ...tunnelAddonConfig, CLOUDFLARE_TUNNEL_ENABLED: "true" };
+  assert.throws(() => resolveRuntimeConfig(enabled), /CLOUDFLARE_TUNNEL_TOKEN/);
+  for (const origin of ["", "http://gatekeeper.example.com", "https://user:pass@example.com", "https://example.com/api", "https://example.com?token=x", "https://example.com#fragment"]) {
+    assert.throws(() => resolveRuntimeConfig({
+      ...enabled,
+      CLOUDFLARE_TUNNEL_TOKEN: "tunnel-token",
+      CLOUDFLARE_PUBLIC_URL: origin
+    }), /CLOUDFLARE_PUBLIC_URL/);
+  }
+  assert.throws(() => resolveRuntimeConfig({
+    ...enabled,
+    CLOUDFLARE_TUNNEL_TOKEN: "secret\nsecond-line",
+    CLOUDFLARE_PUBLIC_URL: "https://gatekeeper.example.com"
+  }), /CLOUDFLARE_TUNNEL_TOKEN/);
+});
+
+test("disabled tunnel ignores stale Cloudflare settings", () => {
+  const config = resolveRuntimeConfig({
+    ...tunnelAddonConfig,
+    CLOUDFLARE_TUNNEL_TOKEN: "unused-secret",
+    CLOUDFLARE_PUBLIC_URL: "http://unused.invalid"
+  });
+  assert.equal(config.CLOUDFLARE_TUNNEL_TOKEN, "");
+  assert.equal(config.CLOUDFLARE_PUBLIC_URL, "");
+});
+
+test("standalone mode rejects enabling the Add-on tunnel", () => {
+  assert.throws(() => resolveRuntimeConfig({
+    HA_BASE_URL: "http://127.0.0.1:8123",
+    HA_TOKEN: "ha-token",
+    ADMIN_PASSWORD: "admin-password",
+    ADMIN_SESSION_SECRET: "session-secret",
+    API_KEY_HASH_SECRET: "api-key-hash-secret",
+    CLOUDFLARE_TUNNEL_ENABLED: "true",
+    CLOUDFLARE_TUNNEL_TOKEN: "tunnel-token",
+    CLOUDFLARE_PUBLIC_URL: "https://gatekeeper.example.com"
+  }), /[Aa]dd-on/);
+});
+
 const validStandaloneEnv = {
   HA_BASE_URL: "http://homeassistant.local:8123",
   HA_TOKEN: "ha-token",
@@ -33,7 +99,10 @@ test("standalone mode resolves HA config, admin secrets, CORS origin, and port",
     HA_GATEKEEPER_ADDON: false,
     ADDON_EXPOSE_API: false,
     LOG_LEVEL: "debug",
-    AUDIT_LOG_RETENTION_DAYS: 90
+    AUDIT_LOG_RETENTION_DAYS: 90,
+    CLOUDFLARE_TUNNEL_ENABLED: false,
+    CLOUDFLARE_TUNNEL_TOKEN: "",
+    CLOUDFLARE_PUBLIC_URL: ""
   });
 });
 

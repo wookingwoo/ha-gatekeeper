@@ -129,6 +129,7 @@ export default function App() {
     >
       {tab === "Quick Start" ? (
         <QuickStartPage
+          publicApiBaseUrl={meQuery.data?.publicApiBaseUrl}
           entities={entitiesQuery.data?.entities ?? []}
           services={servicesQuery.data?.services ?? []}
           isLoadingEntities={entitiesQuery.isLoading || servicesQuery.isLoading}
@@ -146,6 +147,7 @@ export default function App() {
 
       {tab === "Tokens" ? (
         <TokensPage
+          publicApiBaseUrl={meQuery.data?.publicApiBaseUrl}
           clients={clientsQuery.data?.clients ?? []}
           entities={entitiesQuery.data?.entities ?? []}
           services={servicesQuery.data?.services ?? []}

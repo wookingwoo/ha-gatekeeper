@@ -17,6 +17,9 @@ export type RuntimeConfig = {
   ADDON_EXPOSE_API: boolean;
   LOG_LEVEL: z.infer<typeof logLevelSchema>;
   AUDIT_LOG_RETENTION_DAYS: number;
+  CLOUDFLARE_TUNNEL_ENABLED: boolean;
+  CLOUDFLARE_TUNNEL_TOKEN: string;
+  CLOUDFLARE_PUBLIC_URL: string;
 };
 
 const commonSchema = z.object({
@@ -44,11 +47,13 @@ const addonSchema = commonSchema.extend({
 export function resolveRuntimeConfig(raw: Record<string, string | undefined>): RuntimeConfig {
   const HA_GATEKEEPER_ADDON = parseBooleanFlag(raw.HA_GATEKEEPER_ADDON);
   const ADDON_EXPOSE_API = parseBooleanFlag(raw.ADDON_EXPOSE_API);
+  const tunnel = resolveTunnelConfig(raw, HA_GATEKEEPER_ADDON);
 
   if (HA_GATEKEEPER_ADDON) {
     const parsed = addonSchema.parse(raw);
 
     return {
+      ...tunnel,
       NODE_ENV: parsed.NODE_ENV,
       PORT: parsed.PORT,
       DATABASE_URL: parsed.DATABASE_URL,
@@ -68,6 +73,7 @@ export function resolveRuntimeConfig(raw: Record<string, string | undefined>): R
   const parsed = standaloneSchema.parse(raw);
 
   return {
+    ...tunnel,
     NODE_ENV: parsed.NODE_ENV,
     PORT: parsed.PORT,
     DATABASE_URL: parsed.DATABASE_URL,
@@ -81,6 +87,38 @@ export function resolveRuntimeConfig(raw: Record<string, string | undefined>): R
     ADDON_EXPOSE_API,
     LOG_LEVEL: parsed.LOG_LEVEL,
     AUDIT_LOG_RETENTION_DAYS: parsed.AUDIT_LOG_RETENTION_DAYS
+  };
+}
+
+function resolveTunnelConfig(raw: Record<string, string | undefined>, addonMode: boolean) {
+  const enabled = parseBooleanFlag(raw.CLOUDFLARE_TUNNEL_ENABLED);
+  if (!enabled) {
+    return {
+      CLOUDFLARE_TUNNEL_ENABLED: false,
+      CLOUDFLARE_TUNNEL_TOKEN: "",
+      CLOUDFLARE_PUBLIC_URL: ""
+    };
+  }
+  if (!addonMode) {
+    throw new Error("Cloudflare Tunnel is only supported in Add-on mode");
+  }
+
+  const parsed = z.object({
+    CLOUDFLARE_TUNNEL_TOKEN: z.string().trim().min(1).regex(/^[A-Za-z0-9+/=_-]+$/),
+    CLOUDFLARE_PUBLIC_URL: z.string().trim().url().refine((value) => {
+      try {
+        const url = new URL(value);
+        return url.protocol === "https:" && url.href === `${url.origin}/`;
+      } catch {
+        return false;
+      }
+    }, "Use an HTTPS origin without credentials, path, query or fragment")
+  }).parse(raw);
+
+  return {
+    CLOUDFLARE_TUNNEL_ENABLED: true,
+    CLOUDFLARE_TUNNEL_TOKEN: parsed.CLOUDFLARE_TUNNEL_TOKEN,
+    CLOUDFLARE_PUBLIC_URL: new URL(parsed.CLOUDFLARE_PUBLIC_URL).origin
   };
 }
 

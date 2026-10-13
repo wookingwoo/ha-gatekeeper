@@ -12,8 +12,18 @@ import { env, isProd } from "./env.js";
 import { prisma } from "./db.js";
 import { adminRoutes } from "./admin.js";
 import { publicApiRoutes } from "./publicApi.js";
+import { createTunnelApi, TUNNEL_API_PORT } from "./tunnelApi.js";
+import { startCloudflareTunnel, type CloudflareTunnel } from "./cloudflareTunnel.js";
 
 const app = Fastify({ logger: true });
+let tunnelApi: ReturnType<typeof createTunnelApi> | undefined;
+let tunnelProcess: CloudflareTunnel | undefined;
+
+app.addHook("onClose", async () => {
+  await tunnelProcess?.stop();
+  await tunnelApi?.close();
+  await prisma.$disconnect();
+});
 
 await app.register(cors, {
   origin: env.CORS_ORIGIN,
@@ -95,10 +105,49 @@ const start = async () => {
   try {
     await pruneAuditLogs();
     await app.listen({ port: env.PORT, host: "0.0.0.0" });
+    if (env.CLOUDFLARE_TUNNEL_ENABLED) {
+      tunnelApi = createTunnelApi(publicApiRoutes, app.log);
+      await tunnelApi.listen({ port: TUNNEL_API_PORT, host: "127.0.0.1" });
+      tunnelProcess = await startCloudflareTunnel(env.CLOUDFLARE_TUNNEL_TOKEN, {
+        info: (message) => app.log.info(message),
+        error: (message) => app.log.error(message)
+      });
+    }
   } catch (err) {
     app.log.error(err);
+    await app.close();
     process.exit(1);
   }
 };
 
-start();
+let closing = false;
+let startup: Promise<void> = Promise.resolve();
+async function shutdown() {
+  if (closing) return;
+  closing = true;
+  try {
+    // Startup owns async token-file creation; finish assigning its resources
+    // before teardown so no connector can appear after the close hooks ran.
+    await startup;
+    const drainTimer = setTimeout(() => {
+      app.server.closeAllConnections();
+      tunnelApi?.server.closeAllConnections();
+    }, 5000);
+    drainTimer.unref();
+    try {
+      // Stop public ingress before HTTP draining. An incomplete HTTP body must
+      // not keep the connector alive or prevent its private token-file cleanup.
+      await tunnelProcess?.stop();
+      await app.close();
+    } finally {
+      clearTimeout(drainTimer);
+    }
+  } catch (err) {
+    app.log.error(err, "shutdown_failed");
+    process.exitCode = 1;
+  }
+}
+process.once("SIGTERM", shutdown);
+process.once("SIGINT", shutdown);
+
+startup = start();

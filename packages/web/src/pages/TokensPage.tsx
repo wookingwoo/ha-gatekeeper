@@ -35,7 +35,8 @@ export function TokensPage({
   issuedKey,
   onRotate,
   onDelete,
-  onSavePermissions
+  onSavePermissions,
+  publicApiBaseUrl
 }: {
   clients: Client[];
   entities: HaEntity[];
@@ -44,10 +45,11 @@ export function TokensPage({
   onRotate: (id: string) => void;
   onDelete: (id: string) => void;
   onSavePermissions: (id: string, permissions: TokenPermission[]) => void;
+  publicApiBaseUrl?: string | null;
 }) {
   const [editingClientId, setEditingClientId] = useState<string | null>(null);
   const [draftGroups, setDraftGroups] = useState<PermissionGroup[]>([]);
-  const [bundleBaseUrl, setBundleBaseUrl] = useState(() => getDefaultGatekeeperBaseUrl());
+  const [bundleBaseUrl, setBundleBaseUrl] = useState(() => getDefaultGatekeeperBaseUrl(undefined, publicApiBaseUrl));
   const [bundleErrorClientId, setBundleErrorClientId] = useState<string | null>(null);
 
   function handleDownloadBundle(client: Client): void {

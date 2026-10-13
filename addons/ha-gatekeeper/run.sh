@@ -44,6 +44,9 @@ export LOG_LEVEL="$log_level"
 export PORT=8080
 export DATABASE_URL=file:/data/ha-gatekeeper.db
 export CORS_ORIGIN=http://localhost:8080
+export CLOUDFLARE_TUNNEL_ENABLED="$(read_option cloudflare_tunnel_enabled false)"
+export CLOUDFLARE_TUNNEL_TOKEN="$(read_option cloudflare_tunnel_token '')"
+export CLOUDFLARE_PUBLIC_URL="$(read_option cloudflare_public_url '')"
 
 cd /app/packages/server
 

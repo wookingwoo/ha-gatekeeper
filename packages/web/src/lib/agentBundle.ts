@@ -85,8 +85,13 @@ export function projectAgentCapabilities(permissions: TokenPermission[]): AgentC
 }
 
 export function getDefaultGatekeeperBaseUrl(
-  locationLike: GatekeeperLocationLike = window.location
+  locationLike?: GatekeeperLocationLike,
+  publicApiBaseUrl?: string | null
 ): string {
+  if (publicApiBaseUrl) {
+    return publicApiBaseUrl;
+  }
+  locationLike ??= window.location;
   if (isAddonIngressPath(locationLike.pathname)) {
     return `${locationLike.protocol}//${locationLike.hostname}:4283`;
   }

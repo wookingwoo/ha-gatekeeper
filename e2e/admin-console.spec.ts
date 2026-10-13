@@ -3,6 +3,8 @@ import { expect, test } from "@playwright/test";
 const adminPassword = process.env.E2E_ADMIN_PASSWORD ?? "change-this-password";
 
 test("admin console loads and primary navigation responds", async ({ page }) => {
+  // Navigation tests should not depend on the external font CDN being reachable.
+  await page.route("https://fonts.googleapis.com/**", (route) => route.fulfill({ contentType: "text/css", body: "" }));
   const browserErrors: string[] = [];
   page.on("pageerror", (error) => browserErrors.push(error.message));
   page.on("console", (message) => {

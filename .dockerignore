@@ -10,6 +10,9 @@ packages/server/prisma/prisma/dev.db-journal
 .env
 .env.*
 !.env.example
+**/.env
+**/.env.*
+!**/.env.example
 
 test-results/
 playwright-report/

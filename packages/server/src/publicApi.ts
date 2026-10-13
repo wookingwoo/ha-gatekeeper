@@ -32,9 +32,11 @@ function getAuthorizationHeader(headers: Record<string, string | string[] | unde
   return Array.isArray(authorization) ? authorization[0] : authorization;
 }
 
-export const publicApiRoutes: FastifyPluginAsync = async (app) => {
+export type PublicApiOptions = { exposeApi?: boolean };
+
+export const publicApiRoutes: FastifyPluginAsync<PublicApiOptions> = async (app, options) => {
   app.addHook("onRequest", async (request, reply) => {
-    if (isPublicApiAllowed({ addonMode: env.HA_GATEKEEPER_ADDON, exposeApi: env.ADDON_EXPOSE_API })) {
+    if (isPublicApiAllowed({ addonMode: env.HA_GATEKEEPER_ADDON, exposeApi: options.exposeApi ?? env.ADDON_EXPOSE_API })) {
       return;
     }
 

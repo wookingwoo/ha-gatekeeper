@@ -117,7 +117,7 @@ export const api = {
       body: JSON.stringify({ password })
     }),
   logout: () => apiFetch<{}>("/admin/logout", { method: "POST" }),
-  me: () => apiFetch<{ authenticated: boolean }>("/admin/me"),
+  me: () => apiFetch<{ authenticated: boolean; publicApiBaseUrl: string | null }>("/admin/me"),
   clients: () => apiFetch<{ clients: Client[] }>("/admin/clients"),
   createClient: (payload: {
     name: string;

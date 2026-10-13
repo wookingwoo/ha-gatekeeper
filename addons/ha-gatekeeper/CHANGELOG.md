@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.3.0
+
+- Added an optional bundled Cloudflare Tunnel connector for public HTTPS API access without router port forwarding or a separate tunnel add-on.
+- Added an API-only loopback listener on port 8081 that keeps admin, static and documentation routes out of the tunnel and retains scoped token enforcement.
+- Added connector token-file authentication, log redaction, process restart and shutdown cleanup.
+- Added a configured public URL to issued-token examples and both agent setup bundle downloads, with English and Korean add-on option descriptions.
+- Kept direct LAN API exposure independently configurable and disabled by default.
+
 ## 0.2.0
 
 - Fixed a duplicated `/api` path segment when calling the Home Assistant Core API through the
