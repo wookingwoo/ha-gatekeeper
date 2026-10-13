@@ -10,6 +10,7 @@ export type RuntimeConfig = {
   DATABASE_URL: string;
   HA_BASE_URL: string;
   HA_TOKEN: string;
+  HA_REQUEST_TIMEOUT_MS: number;
   ADMIN_PASSWORD: string;
   ADMIN_SESSION_SECRET: string;
   API_KEY_HASH_SECRET: string;
@@ -26,6 +27,7 @@ export type RuntimeConfig = {
 const commonSchema = z.object({
   NODE_ENV: nodeEnvSchema,
   PUBLIC_API_IP_RATE_LIMIT: z.coerce.number().int().positive().default(300),
+  HA_REQUEST_TIMEOUT_MS: z.coerce.number().int().positive().default(30000),
   PORT: z.coerce.number().int().positive().default(8080),
   DATABASE_URL: z.string().default("file:./prisma/dev.db"),
   ADMIN_SESSION_SECRET: z.string().trim().min(8),
@@ -62,6 +64,7 @@ export function resolveRuntimeConfig(raw: Record<string, string | undefined>): R
       DATABASE_URL: parsed.DATABASE_URL,
       HA_BASE_URL: "http://supervisor/core",
       HA_TOKEN: parsed.SUPERVISOR_TOKEN,
+      HA_REQUEST_TIMEOUT_MS: parsed.HA_REQUEST_TIMEOUT_MS,
       ADMIN_PASSWORD: parsed.ADMIN_PASSWORD || "addon-ingress-authenticated",
       ADMIN_SESSION_SECRET: parsed.ADMIN_SESSION_SECRET,
       API_KEY_HASH_SECRET: parsed.API_KEY_HASH_SECRET,
@@ -83,6 +86,7 @@ export function resolveRuntimeConfig(raw: Record<string, string | undefined>): R
     DATABASE_URL: parsed.DATABASE_URL,
     HA_BASE_URL: parsed.HA_BASE_URL,
     HA_TOKEN: parsed.HA_TOKEN,
+    HA_REQUEST_TIMEOUT_MS: parsed.HA_REQUEST_TIMEOUT_MS,
     ADMIN_PASSWORD: parsed.ADMIN_PASSWORD,
     ADMIN_SESSION_SECRET: parsed.ADMIN_SESSION_SECRET,
     API_KEY_HASH_SECRET: parsed.API_KEY_HASH_SECRET,

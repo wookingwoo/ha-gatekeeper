@@ -92,6 +92,7 @@ test("standalone mode resolves HA config, admin secrets, CORS origin, and port",
     DATABASE_URL: "file:./custom.db",
     HA_BASE_URL: "http://homeassistant.local:8123",
     HA_TOKEN: "ha-token",
+    HA_REQUEST_TIMEOUT_MS: 30000,
     ADMIN_PASSWORD: "admin-password",
     ADMIN_SESSION_SECRET: "session-secret",
     API_KEY_HASH_SECRET: "api-key-hash-secret",
@@ -197,5 +198,15 @@ test("add-on mode throws if SUPERVISOR_TOKEN is missing", () => {
   assert.equal(resolveRuntimeConfig({...validStandaloneEnv, PUBLIC_API_IP_RATE_LIMIT: "7"}).PUBLIC_API_IP_RATE_LIMIT, 7);
   for (const value of ["0", "-1", "1.5", "NaN", ""]) {
     assert.throws(() => resolveRuntimeConfig({...validStandaloneEnv, PUBLIC_API_IP_RATE_LIMIT: value}), /PUBLIC_API_IP_RATE_LIMIT/);
+  }
+});
+
+test("HA deadline defaults and validates in both modes", () => {
+  for (const base of [validStandaloneEnv, tunnelAddonConfig]) {
+    assert.equal(resolveRuntimeConfig(base).HA_REQUEST_TIMEOUT_MS, 30000);
+    assert.equal(resolveRuntimeConfig({ ...base, HA_REQUEST_TIMEOUT_MS: "250" }).HA_REQUEST_TIMEOUT_MS, 250);
+    for (const value of ["0", "-1", "1.5", "NaN", ""]) {
+      assert.throws(() => resolveRuntimeConfig({ ...base, HA_REQUEST_TIMEOUT_MS: value }), /HA_REQUEST_TIMEOUT_MS/);
+    }
   }
 });

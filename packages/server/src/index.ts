@@ -8,6 +8,7 @@ import path from "node:path";
 import fs from "node:fs";
 import crypto from "node:crypto";
 import { fileURLToPath } from "node:url";
+import { closeHaConnections } from "./ha.js";
 import { env, isProd } from "./env.js";
 import { prisma } from "./db.js";
 import { adminRoutes } from "./admin.js";
@@ -20,9 +21,16 @@ let tunnelApi: ReturnType<typeof createTunnelApi> | undefined;
 let tunnelProcess: CloudflareTunnel | undefined;
 
 app.addHook("onClose", async () => {
-  await tunnelProcess?.stop();
-  await tunnelApi?.close();
-  await prisma.$disconnect();
+  try {
+    await tunnelProcess?.stop();
+  } finally {
+    await closeHaConnections();
+    try {
+      await tunnelApi?.close();
+    } finally {
+      await prisma.$disconnect();
+    }
+  }
 });
 
 await app.register(cors, {
@@ -115,6 +123,7 @@ const start = async () => {
     }
   } catch (err) {
     app.log.error(err);
+    await closeHaConnections();
     await app.close();
     process.exit(1);
   }
@@ -137,8 +146,12 @@ async function shutdown() {
     try {
       // Stop public ingress before HTTP draining. An incomplete HTTP body must
       // not keep the connector alive or prevent its private token-file cleanup.
-      await tunnelProcess?.stop();
-      await app.close();
+      try {
+        await tunnelProcess?.stop();
+      } finally {
+        await closeHaConnections();
+        await app.close();
+      }
     } finally {
       clearTimeout(drainTimer);
     }
