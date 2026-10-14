@@ -1,5 +1,6 @@
 import type { ReactNode } from "react";
 import { useTheme } from "../lib/theme";
+import { Icon } from "./Icon";
 import { Button } from "./ui/button";
 import { Badge } from "./ui/badge";
 
@@ -10,63 +11,69 @@ type AppShellProps = {
   activeTab: Tab;
   onTabChange: (tab: Tab) => void;
   onLogout: () => void;
+  isLoggingOut?: boolean;
   haStatus: "loading" | "connected" | "error";
   children: ReactNode;
 };
 
-function statusLabel(status: AppShellProps["haStatus"]): string {
-  if (status === "connected") return "Home Assistant connected";
-  if (status === "error") return "Home Assistant unavailable";
-  return "Checking Home Assistant";
-}
-
-function statusVariant(status: AppShellProps["haStatus"]): "success" | "danger" | "warning" {
-  if (status === "connected") return "success";
-  if (status === "error") return "danger";
-  return "warning";
-}
-
-export function AppShell({ activeTab, onTabChange, onLogout, haStatus, children }: AppShellProps) {
+export function AppShell({
+  activeTab, onTabChange, onLogout, isLoggingOut, haStatus, children,
+}: AppShellProps) {
   const { theme, toggleTheme } = useTheme();
+  const statusLabel = haStatus === "connected"
+    ? "Home Assistant connected"
+    : haStatus === "error" ? "Home Assistant unavailable" : "Checking Home Assistant";
+  const themeLabel = theme === "light" ? "Dark mode" : "Light mode";
 
   return (
-    <div className="min-h-screen bg-[var(--background)] px-4 py-5 text-[var(--foreground)] sm:px-6 lg:px-8">
+    <div className="min-h-screen px-4 py-5 sm:px-6 lg:px-8">
+      <a href="#main-content"
+        className="sr-only z-50 rounded-lg bg-[var(--surface)] p-3 text-sm focus:not-sr-only focus:fixed focus:left-4 focus:top-4">
+        Skip to content
+      </a>
       <div className="mx-auto flex max-w-7xl flex-col gap-6">
-        <header className="rounded-lg border border-[var(--border)] bg-[var(--surface)] px-4 py-3 shadow-sm">
+        <header className="rounded-lg border border-[var(--border)] bg-[var(--surface)] px-3 py-3 shadow-sm sm:px-4">
           <div className="flex flex-wrap items-center gap-3">
-            <div className="mr-2">
-              <h1 className="text-lg font-semibold tracking-normal text-[var(--foreground)]">
-                ha-gatekeeper
-              </h1>
-              <p className="text-xs text-[var(--muted)]">Home Assistant access console</p>
+            <div className="mr-auto min-w-0 xl:mr-2">
+              <h1 className="text-lg font-semibold">ha-gatekeeper</h1>
+              <p className="text-xs text-[var(--muted)] sm:text-xs">Home Assistant access console</p>
             </div>
-
-            <nav className="flex flex-wrap gap-2" aria-label="Primary navigation">
+            <nav aria-label="Primary navigation"
+              className="order-3 grid w-full grid-cols-3 gap-2 xl:order-none xl:flex xl:w-auto">
               {tabs.map((tab) => (
-                <Button
-                  key={tab}
-                  size="sm"
+                <Button key={tab} size="sm"
                   variant={activeTab === tab ? "default" : "ghost"}
-                  onClick={() => onTabChange(tab)}
-                >
+                  className="min-w-0 px-2 text-sm sm:px-3"
+                  aria-current={activeTab === tab ? "page" : undefined}
+                  onClick={() => onTabChange(tab)}>
                   {tab}
                 </Button>
               ))}
             </nav>
-
-            <div className="ml-auto flex flex-wrap items-center gap-2">
-              <Badge variant={statusVariant(haStatus)}>{statusLabel(haStatus)}</Badge>
-              <Button size="sm" variant="secondary" onClick={toggleTheme}>
-                {theme === "light" ? "Dark mode" : "Light mode"}
+            <div className="order-4 w-full xl:order-none xl:ml-auto xl:w-auto">
+              <Badge variant={haStatus === "connected" ? "success" : haStatus === "error" ? "danger" : "warning"}>
+                <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-current" />
+                {statusLabel}
+              </Badge>
+            </div>
+            <div className="flex items-center gap-2">
+              <Button size="sm" variant="secondary" onClick={toggleTheme}
+                aria-label={themeLabel} title={themeLabel} className="min-w-10 px-2 sm:px-3">
+                <Icon name={theme === "light" ? "moon" : "sun"} size={16} />
+                <span className="hidden sm:inline">{themeLabel}</span>
               </Button>
-              <Button size="sm" variant="secondary" onClick={onLogout}>
-                Log out
+              <Button size="sm" variant="secondary" onClick={onLogout}
+                disabled={isLoggingOut} aria-label={isLoggingOut ? "Logging out…" : "Log out"}
+                className="min-w-10 px-2 sm:px-3">
+                <Icon name="logout" size={16} />
+                <span className="hidden sm:inline">{isLoggingOut ? "Logging out…" : "Log out"}</span>
               </Button>
             </div>
           </div>
         </header>
-
-        <main>{children}</main>
+        <main id="main-content" tabIndex={-1} className="min-w-0 pb-20 outline-none sm:pb-0">
+          <div key={activeTab} className="page-enter">{children}</div>
+        </main>
       </div>
     </div>
   );

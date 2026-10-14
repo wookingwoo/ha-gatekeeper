@@ -15,9 +15,20 @@ A single-container API gateway for Home Assistant that issues limited, audited b
 
 ## Screenshots
 
-![Admin Dashboard (placeholder)](docs/assets/screenshot-admin-dashboard.png)
+![Admin dashboard](docs/assets/screenshot-admin-dashboard.png)
 
-Placeholder image. Replace this file with a real screenshot when ready.
+The access console keeps its slate-and-teal theme and top navigation, with locally
+bundled Inter typography and readable labels and controls. Token creation has two steps:
+configure services and entities, then review the exact scope before issuing a key.
+Mobile screens have fixed setup actions and compact activity entries with
+expandable request details.
+Token and activity views include search, filters, and loading and error feedback.
+The screenshots use demonstration entities and tokens.
+
+[Access review](docs/assets/screenshot-access-review.png) ·
+[Dark theme](docs/assets/screenshot-admin-dark.png) ·
+[Mobile setup](docs/assets/screenshot-mobile-setup.png) ·
+[Mobile activity](docs/assets/screenshot-mobile-activity.png)
 
 ## Home Assistant Add-on
 

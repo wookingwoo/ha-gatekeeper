@@ -1,24 +1,12 @@
 import type { ApiError } from "../api";
+import { useTheme } from "../lib/theme";
+import { Icon } from "./Icon";
+import { ErrorNotice } from "./Feedback";
 import { Button } from "./ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "./ui/card";
 import { Input } from "./ui/input";
 
-function loginErrorMessage(error: ApiError | null): string | null {
-  if (!error) {
-    return null;
-  }
-  if (error.code === "rate_limited") {
-    return "Too many login attempts. Wait a moment and try again.";
-  }
-  return "Login failed. Check your password.";
-}
-
 export function LoginCard({
-  password,
-  onPasswordChange,
-  onSubmit,
-  isSubmitting,
-  error
+  password, onPasswordChange, onSubmit, isSubmitting, error,
 }: {
   password: string;
   onPasswordChange: (value: string) => void;
@@ -26,41 +14,48 @@ export function LoginCard({
   isSubmitting: boolean;
   error: ApiError | null;
 }) {
-  const errorMessage = loginErrorMessage(error);
-
+  const { theme, toggleTheme } = useTheme();
+  const errorMessage = !error ? null : error.code === "rate_limited"
+    ? "Too many login attempts. Wait a moment and try again."
+    : "Login failed. Check your password and try again.";
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle className="text-2xl">ha-gatekeeper</CardTitle>
-        <p className="text-sm text-[var(--muted)]">Session-based admin console login</p>
-      </CardHeader>
-      <CardContent className="space-y-4">
-        <div className="space-y-2">
-          <label htmlFor="admin-password" className="text-xs font-semibold uppercase text-[var(--muted)]">
-            Admin password
-          </label>
-          <Input
-            id="admin-password"
-            type="password"
-            placeholder="Admin password"
-            value={password}
-            onChange={(event) => onPasswordChange(event.target.value)}
-            onKeyDown={(event) => {
-              if (event.key === "Enter") {
-                onSubmit();
-              }
-            }}
-          />
+    <div className="flex min-h-screen items-center justify-center px-4 py-20">
+      <Button variant="secondary" className="absolute right-5 top-5"
+        onClick={toggleTheme} aria-label={theme === "light" ? "Dark mode" : "Light mode"}>
+        <Icon name={theme === "light" ? "moon" : "sun"} size={16} />
+        {theme === "light" ? "Dark mode" : "Light mode"}
+      </Button>
+      <section className="studio-panel w-full max-w-md p-6 sm:p-8">
+        <h1 className="text-xl font-semibold">ha-gatekeeper</h1>
+        <p className="mt-1 text-sm text-[var(--muted)]">Home Assistant access console</p>
+        <div className="mt-6 border-t border-[var(--border)] pt-6">
+          <h2 className="text-2xl font-semibold">Welcome home.</h2>
+          <p className="mt-2 text-sm text-[var(--muted)]">Log in to manage your access tokens.</p>
         </div>
-        <Button className="w-full" onClick={onSubmit} disabled={isSubmitting}>
-          {isSubmitting ? "Logging in..." : "Log in"}
-        </Button>
-        {errorMessage ? (
-          <p className="rounded-md border border-[var(--danger-border)] bg-[var(--danger-soft)] p-3 text-sm text-[var(--danger)]">
-            {errorMessage}
-          </p>
-        ) : null}
-      </CardContent>
-    </Card>
+        <form className="mt-6 space-y-5" onSubmit={(event) => {
+          event.preventDefault();
+          if (password && !isSubmitting) onSubmit();
+        }}>
+          <div className="space-y-2">
+            <label htmlFor="admin-password" className="field-label">Admin password</label>
+            <Input id="admin-password" type="password" autoComplete="current-password"
+              placeholder="Enter your admin password" value={password}
+              onChange={(event) => onPasswordChange(event.target.value)}
+              required disabled={isSubmitting} aria-invalid={Boolean(error)}
+              aria-describedby={errorMessage ? "login-error" : undefined} />
+          </div>
+          {errorMessage ? (
+            <ErrorNotice><span id="login-error">{errorMessage}</span></ErrorNotice>
+          ) : null}
+          <Button className="w-full" type="submit" disabled={!password || isSubmitting}>
+            {isSubmitting ? <><span className="loading-spinner" />Logging in…</> : <>Log in<Icon name="arrow" size={16} /></>}
+          </Button>
+        </form>
+        <p className="mt-6 flex items-start gap-2 border-t border-[var(--border)] pt-5 text-xs leading-relaxed text-[var(--muted)]">
+          <Icon name="lock" size={14} className="mt-0.5 shrink-0" />
+          Your Home Assistant token stays on the server. Only scoped Gatekeeper tokens are shared.
+        </p>
+      </section>
+    </div>
   );
 }
