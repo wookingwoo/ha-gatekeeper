@@ -13,13 +13,13 @@ const client = {
       domain: "light",
       services: ["turn_on", "turn_off"],
       entityIds: ["light.living_room"],
-      allowNoEntity: false
+      allowNoEntity: false,
     },
     {
       kind: "state" as const,
-      entityIds: ["sensor.living_room_temperature"]
-    }
-  ]
+      entityIds: ["sensor.living_room_temperature"],
+    },
+  ],
 };
 
 async function mockAdminApi(page: Page, publicApiBaseUrl: string | null = null): Promise<void> {
@@ -36,8 +36,10 @@ async function mockAdminApi(page: Page, publicApiBaseUrl: string | null = null):
     await route.fulfill({
       json: {
         ok: true,
-        services: [{ domain: "light", services: ["turn_on", "turn_off", "toggle"] }]
-      }
+        services: [
+          { domain: "light", services: ["turn_on", "turn_off", "toggle"] },
+        ],
+      },
     });
   });
   await page.route("**/admin/ha/entities", async (route) => {
@@ -45,18 +47,24 @@ async function mockAdminApi(page: Page, publicApiBaseUrl: string | null = null):
       json: {
         ok: true,
         entities: [
-          { entityId: "light.living_room", domain: "light", name: "Living Room" },
+          {
+            entityId: "light.living_room",
+            domain: "light",
+            name: "Living Room",
+          },
           {
             entityId: "sensor.living_room_temperature",
             domain: "sensor",
-            name: "Living Room Temperature"
-          }
-        ]
-      }
+            name: "Living Room Temperature",
+          },
+        ],
+      },
     });
   });
   await page.route("**/admin/quick-setup", async (route) => {
-    await route.fulfill({ json: { ok: true, client, apiKey: "hgk_live_secret" } });
+    await route.fulfill({
+      json: { ok: true, client, apiKey: "hgk_live_secret" },
+    });
   });
 }
 
@@ -67,6 +75,8 @@ test("configured tunnel URL flows from admin metadata into both bundle downloads
   await page.getByRole("button", { name: "Select entities" }).click();
   await page.getByRole("button", { name: /Living Room/ }).click();
   await page.keyboard.press("Escape");
+  await page.getByLabel("Token name").fill("Living Room Agent");
+  await page.getByRole("button", { name: "Review access", exact: true }).click();
   await page.getByRole("button", { name: "Issue token" }).click();
   await expect(page.getByLabel("Gatekeeper API base URL")).toHaveValue(publicUrl);
   await expect(page.locator("pre")).toContainText(`${publicUrl}/api/services/light/turn_on`);
@@ -75,6 +85,7 @@ test("configured tunnel URL flows from admin metadata into both bundle downloads
   let download = await downloadPromise;
   expect(await readFile((await download.path())!, "utf8")).toContain(publicUrl);
   await page.getByRole("button", { name: "Tokens" }).click();
+  await page.getByText("Agent bundle settings", { exact: true }).click();
   await expect(page.getByLabel("Gatekeeper API base URL")).toHaveValue(publicUrl);
   await page.getByLabel("Gatekeeper API base URL").fill("https://custom.example.com");
   downloadPromise = page.waitForEvent("download");
@@ -86,38 +97,60 @@ test("configured tunnel URL flows from admin metadata into both bundle downloads
 });
 
 test("issued token can download an agent setup bundle and opt into live-token warning", async ({
-  page
+  page,
 }) => {
   await mockAdminApi(page);
 
   await page.goto("/");
-  await expect(page.getByRole("heading", { name: "Create scoped access", exact: true })).toBeVisible();
+  await expect(
+    page.getByRole("heading", { name: "Create scoped access", exact: true }),
+  ).toBeVisible();
 
   await page.getByRole("button", { name: "Select entities" }).click();
   await page.getByRole("button", { name: /Living Room/ }).click();
   await page.keyboard.press("Escape");
 
+  await page.getByLabel("Token name").fill("Living Room Agent");
+  await page
+    .getByRole("button", { name: "Review access", exact: true })
+    .click();
   await page.getByRole("button", { name: "Issue token" }).click();
-  await expect(page.getByRole("heading", { name: "Token issued", exact: true })).toBeVisible();
+  await expect(
+    page.getByRole("heading", { name: "Token issued", exact: true }),
+  ).toBeVisible();
 
   const downloadPromise = page.waitForEvent("download");
-  await page.getByRole("button", { name: "Download agent setup bundle" }).click();
+  await page
+    .getByRole("button", { name: "Download agent setup bundle" })
+    .click();
   const download = await downloadPromise;
-  expect(download.suggestedFilename()).toBe("ha-gatekeeper-agent-bundle-living-room-agent.zip");
+  expect(download.suggestedFilename()).toBe(
+    "ha-gatekeeper-agent-bundle-living-room-agent.zip",
+  );
 
   await page.getByLabel("Include bearer token in bundle").check();
-  await expect(page.getByText("This bundle contains a live bearer token")).toBeVisible();
+  await expect(
+    page.getByText("This bundle contains a live bearer token"),
+  ).toBeVisible();
 });
 
-test("tokens list downloads placeholder-only agent bundle", async ({ page }) => {
+test("tokens list downloads placeholder-only agent bundle", async ({
+  page,
+}) => {
   await mockAdminApi(page);
 
   await page.goto("/");
   await page.getByRole("button", { name: "Tokens" }).click();
-  await expect(page.getByRole("heading", { name: "Tokens", exact: true })).toBeVisible();
+  await expect(
+    page.getByRole("heading", { name: "Tokens", exact: true }),
+  ).toBeVisible();
 
   const downloadPromise = page.waitForEvent("download");
-  await page.getByRole("button", { name: "Download bundle for Living Room Agent" }).click();
+  await page
+    .getByRole("button", { name: "Download bundle for Living Room Agent" })
+    .click();
   const download = await downloadPromise;
-  expect(download.suggestedFilename()).toBe("ha-gatekeeper-agent-bundle-living-room-agent.zip");
+  expect(download.suggestedFilename()).toBe(
+    "ha-gatekeeper-agent-bundle-living-room-agent.zip",
+  );
 });

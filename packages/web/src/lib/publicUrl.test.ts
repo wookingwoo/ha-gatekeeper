@@ -17,6 +17,7 @@ function issuedPage(permissions: TokenPermission[]) {
   return renderToStaticMarkup(createElement(QuickStartPage, {
     entities: [], services: [], isLoadingEntities: false, hasEntityError: false,
     onRetryEntities() {}, onCreate() {}, onClearResult() {}, isSubmitting: false,
+    hasSubmitError: false,
     result: { client: { ...client, permissions }, apiKey: "scoped-fixture" }, publicApiBaseUrl
   }));
 }
@@ -35,7 +36,9 @@ test("issued state token displays an absolute public API example", () => {
 test("existing tokens default their editable bundle URL to the configured public origin", () => {
   const html = renderToStaticMarkup(createElement(TokensPage, {
     clients: [client], entities: [], services: [], issuedKey: null,
-    onRotate() {}, onDelete() {}, onSavePermissions() {}, publicApiBaseUrl
+    isLoading: false, hasError: false, onRetry() {}, onCreate() {},
+    isMutating: false, mutationError: null, canEditPermissions: true,
+    onRotate() {}, onDelete() {}, async onSavePermissions() {}, publicApiBaseUrl
   }));
   assert.ok(html.includes(`value="${publicApiBaseUrl}"`));
 });

@@ -1,41 +1,26 @@
-import { useMemo, useState } from "react";
-import type { HaEntity, HaServiceCatalog, QuickSetupPayload, QuickSetupResult, TokenPermission } from "../api";
+import { useEffect, useMemo, useRef, useState } from "react";
+import type {
+  HaEntity,
+  HaServiceCatalog,
+  QuickSetupPayload,
+  QuickSetupResult,
+} from "../api";
 import { AccessSummary } from "../components/AccessSummary";
 import { DomainPermissionEditor } from "../components/DomainPermissionEditor";
-import { HomeAssistantTokenHelp } from "../components/HomeAssistantTokenHelp";
+import { PermissionReview } from "../components/PermissionReview";
+import { TokenIssued } from "../components/TokenIssued";
+import { HomeAssistantHelpDialog } from "../components/HomeAssistantHelpDialog";
 import { Button } from "../components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "../components/ui/card";
 import { Input } from "../components/ui/input";
-import { downloadAgentBundle, getDefaultGatekeeperBaseUrl } from "../lib/agentBundle";
-import { createDefaultGroups, groupsAreComplete, groupsToPermissions } from "../lib/permissionGroups";
-
-function makeCurl(permissions: TokenPermission[], baseUrl: string): string {
-  const servicePermission = permissions.find(
-    (permission): permission is Extract<TokenPermission, { kind: "service" }> =>
-      permission.kind === "service"
-  );
-  if (servicePermission) {
-    const entityId = servicePermission.entityIds[0] ?? "light.living_room";
-    return [
-      `curl -X POST ${baseUrl}/api/services/${encodeURIComponent(servicePermission.domain)}/${encodeURIComponent(servicePermission.services[0])}`,
-      `  -H "Authorization: Bearer <TOKEN>"`,
-      `  -H "Content-Type: application/json"`,
-      `  -d '{"entity_id":"${entityId}"}'`
-    ].join(" \\\n");
-  }
-
-  const statePermission = permissions.find(
-    (permission): permission is Extract<TokenPermission, { kind: "state" }> =>
-      permission.kind === "state"
-  );
-  if (!statePermission) {
-    return "";
-  }
-  return [
-    `curl ${baseUrl}/api/states/${encodeURIComponent(statePermission.entityIds[0])}`,
-    `  -H "Authorization: Bearer <TOKEN>"`
-  ].join(" \\\n");
-}
+import {
+  buildAccessSummary,
+  createDefaultGroups,
+  groupsAreComplete,
+  groupsToPermissions,
+} from "../lib/permissionGroups";
+import { Icon } from "../components/Icon";
+import { PageHeading } from "../components/PageHeading";
+import { ErrorNotice } from "../components/Feedback";
 
 export function QuickStartPage({
   entities,
@@ -47,7 +32,8 @@ export function QuickStartPage({
   result,
   onClearResult,
   isSubmitting,
-  publicApiBaseUrl
+  hasSubmitError,
+  publicApiBaseUrl,
 }: {
   entities: HaEntity[];
   services: HaServiceCatalog[];
@@ -58,16 +44,18 @@ export function QuickStartPage({
   result: QuickSetupResult | null;
   onClearResult: () => void;
   isSubmitting: boolean;
+  hasSubmitError: boolean;
   publicApiBaseUrl?: string | null;
 }) {
-  const [name, setName] = useState("Mom access");
+  const [name, setName] = useState("");
   const [groups, setGroups] = useState(createDefaultGroups);
+  const [step, setStep] = useState<"configure" | "review">("configure");
   const [helpOpen, setHelpOpen] = useState(false);
-  const [includeBearerTokenInBundle, setIncludeBearerTokenInBundle] = useState(false);
-  const [bundleBaseUrl, setBundleBaseUrl] = useState(() => getDefaultGatekeeperBaseUrl(undefined, publicApiBaseUrl));
-  const [bundleError, setBundleError] = useState<string | null>(null);
-
+  const reviewHeading = useRef<HTMLHeadingElement>(null);
+  const configureHeading = useRef<HTMLHeadingElement>(null);
+  const hasReviewed = useRef(false);
   const permissions = useMemo(() => groupsToPermissions(groups), [groups]);
+  const summary = buildAccessSummary(groups);
   const canSubmit =
     Boolean(name.trim()) &&
     permissions.length > 0 &&
@@ -75,208 +63,202 @@ export function QuickStartPage({
     !isLoadingEntities &&
     !hasEntityError;
 
-  if (result) {
-    const curl = makeCurl(result.client.permissions, bundleBaseUrl.trim().replace(/\/+$/, ""));
-    const handleDownloadBundle = () => {
-      setBundleError(null);
-      try {
-        downloadAgentBundle({
-          clientName: result.client.name,
-          baseUrl: bundleBaseUrl.trim(),
-          permissions: result.client.permissions,
-          tokenMode: includeBearerTokenInBundle ? "included" : "placeholder",
-          liveToken: includeBearerTokenInBundle ? result.apiKey : undefined
-        });
-      } catch (error) {
-        setBundleError(error instanceof Error ? error.message : String(error));
-      }
-    };
-    const handleCreateAnotherToken = () => {
-      setIncludeBearerTokenInBundle(false);
-      setBundleError(null);
-      onClearResult();
-    };
+  useEffect(() => {
+    if (result) return;
+    if (step === "review") {
+      hasReviewed.current = true;
+      reviewHeading.current?.focus();
+    } else if (hasReviewed.current)
+      configureHeading.current?.focus({ preventScroll: true });
+  }, [step, result]);
 
+  if (result)
     return (
-      <div className="space-y-6">
-        <section>
-          <h2 className="text-2xl font-semibold">Token issued</h2>
-          <p className="text-sm text-[var(--muted)]">Copy this token now. It will not be shown again.</p>
-        </section>
-
-        <Card>
-          <CardHeader>
-            <CardTitle>{result.client.name}</CardTitle>
-            <p className="text-sm text-[var(--muted)]">Bearer token</p>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="break-all rounded-md border border-[var(--primary-border)] bg-[var(--primary-soft)] p-4 font-mono text-sm text-[var(--primary)]">
-              {result.apiKey}
-            </div>
-            {curl ? (
-              <pre className="overflow-auto rounded-md border border-[var(--border)] bg-[var(--surface-muted)] p-4 text-xs text-[var(--foreground)]">
-                {curl}
-              </pre>
-            ) : null}
-            <div className="flex flex-wrap gap-2">
-              <Button onClick={() => navigator.clipboard.writeText(result.apiKey)}>Copy token</Button>
-              {curl ? (
-                <Button variant="secondary" onClick={() => navigator.clipboard.writeText(curl)}>
-                  Copy curl
-                </Button>
-              ) : null}
-              <Button variant="ghost" onClick={handleCreateAnotherToken}>
-                Create another token
-              </Button>
-            </div>
-
-            <div className="space-y-3 rounded-md border border-[var(--border)] bg-[var(--surface-muted)] p-4">
-              <div className="space-y-1">
-                <h3 className="text-sm font-semibold text-[var(--foreground)]">Agent setup bundle</h3>
-                <p className="text-sm text-[var(--muted)]">
-                  Downloads instructions, OpenAPI metadata, OpenClaw skill notes, and curl examples
-                  for this scoped token.
-                </p>
-              </div>
-
-              <div className="space-y-2">
-                <label
-                  htmlFor="quickstart-bundle-base-url"
-                  className="text-xs font-semibold uppercase text-[var(--muted)]"
-                >
-                  Gatekeeper API base URL
-                </label>
-                <Input
-                  id="quickstart-bundle-base-url"
-                  value={bundleBaseUrl}
-                  onChange={(event) => setBundleBaseUrl(event.target.value)}
-                  placeholder="http://homeassistant.local:4283"
-                />
-              </div>
-
-              <Button variant="secondary" onClick={handleDownloadBundle}>
-                Download agent setup bundle
-              </Button>
-
-              <label className="flex items-start gap-3 text-sm text-[var(--foreground)]">
-                <input
-                  type="checkbox"
-                  checked={includeBearerTokenInBundle}
-                  onChange={(event) => setIncludeBearerTokenInBundle(event.target.checked)}
-                  className="mt-1"
-                />
-                <span>
-                  Include bearer token in bundle
-                  <span className="block text-xs text-[var(--muted)]">
-                    Unchecked generates placeholder-only bundle.
-                  </span>
-                </span>
-              </label>
-
-              {includeBearerTokenInBundle ? (
-                <p className="rounded-md border border-[var(--danger-border)] bg-[var(--danger-soft)] p-3 text-sm text-[var(--danger)]">
-                  This bundle contains a live bearer token. Anyone with the zip can use the allowed
-                  gateway actions until the token is rotated, disabled, or deleted.
-                </p>
-              ) : null}
-
-              {bundleError ? (
-                <p className="text-sm text-[var(--danger)]">
-                  Could not create the bundle. Try the download again while this token is still
-                  visible.
-                </p>
-              ) : null}
-            </div>
-          </CardContent>
-        </Card>
-      </div>
+      <TokenIssued
+        publicApiBaseUrl={publicApiBaseUrl}
+        result={result}
+        onCreateAnother={() => {
+          setName("");
+          setGroups(createDefaultGroups());
+          setStep("configure");
+          onClearResult();
+        }}
+      />
     );
-  }
 
   return (
-    <div className="space-y-6">
-      <section>
-        <h2 className="text-2xl font-semibold">Create scoped access</h2>
-        <p className="mt-1 text-sm text-[var(--muted)]">
-          Issue a Gatekeeper token that only allows selected Home Assistant domains, services, and
-          entities.
-        </p>
-      </section>
-
-      {hasEntityError ? (
-        <div className="rounded-lg border border-[var(--danger-border)] bg-[var(--danger-soft)] p-4 text-sm text-[var(--danger)]">
-          <p className="font-medium">Cannot load Home Assistant data</p>
-          <p className="mt-1">
-            Check HA_BASE_URL and HA_TOKEN, restart the server, then retry loading entities and services.
-          </p>
-          <div className="mt-3 flex flex-wrap gap-2">
-            <Button variant="secondary" onClick={onRetryEntities}>
-              Retry
-            </Button>
-            <Button variant="ghost" onClick={() => setHelpOpen(true)}>
-              Open token guide
-            </Button>
-          </div>
-        </div>
+    <div className="space-y-5 sm:space-y-7">
+      <PageHeading
+        eyebrow="Quick Start"
+        title="Create scoped access"
+        description="Issue a Gatekeeper token that only allows selected Home Assistant domains, services, and entities."
+      />
+      {hasSubmitError ? (
+        <ErrorNotice>
+          Could not issue token. Your selections are saved here. Please try
+          again.
+        </ErrorNotice>
       ) : null}
-
-      <div className="grid gap-5 xl:grid-cols-[1fr_360px]">
-        <Card>
-          <CardHeader>
-            <CardTitle>Permission composer</CardTitle>
-            <p className="text-sm text-[var(--muted)]">
-              Group access by Home Assistant domain, then choose services and entities.
-            </p>
-          </CardHeader>
-          <CardContent className="space-y-5">
-            <div className="space-y-2">
-              <label htmlFor="token-name" className="text-xs font-semibold uppercase text-[var(--muted)]">
-                Token name
-              </label>
-              <Input
-                id="token-name"
-                value={name}
-                onChange={(event) => setName(event.target.value)}
-                placeholder="Mom access"
-              />
-            </div>
-
-            <DomainPermissionEditor
-              groups={groups}
-              onChange={setGroups}
-              entities={entities}
-              services={services}
-              disabled={isSubmitting || isLoadingEntities || hasEntityError}
-            />
-          </CardContent>
-        </Card>
-
-        <AccessSummary
-          groups={groups}
-          canSubmit={canSubmit}
-          isSubmitting={isSubmitting}
-          submitLabel="Issue token"
-          onSubmit={() => onCreate({ name, permissions })}
-        />
-      </div>
-
-      {helpOpen ? (
-        <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/55 p-4 backdrop-blur-sm"
-          role="dialog"
-          aria-modal="true"
-          aria-label="Connect Home Assistant"
-          onClick={() => setHelpOpen(false)}
+      {isLoadingEntities ? (
+        <p
+          role="status"
+          className="flex items-center gap-2 text-xs text-[var(--muted)]"
         >
-          <div className="max-h-[90vh] w-full max-w-xl overflow-auto" onClick={(event) => event.stopPropagation()}>
-            <div className="mb-3 flex justify-end">
-              <Button variant="secondary" onClick={() => setHelpOpen(false)}>
-                Close
-              </Button>
-            </div>
-            <HomeAssistantTokenHelp />
-          </div>
-        </div>
+          <span className="loading-spinner" />
+          Loading Home Assistant services and entities…
+        </p>
+      ) : null}
+      {hasEntityError ? (
+        <ErrorNotice onRetry={onRetryEntities}>
+          <p className="font-semibold">Cannot load Home Assistant data</p>
+          <p className="mt-1">Check the Home Assistant connection and retry.</p>
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => setHelpOpen(true)}
+            className="mt-2"
+          >
+            Open token guide
+          </Button>
+        </ErrorNotice>
+      ) : null}
+      <div className="grid items-start gap-6 xl:grid-cols-[minmax(0,1fr)_280px]">
+        <section className="studio-panel">
+          <ol
+            aria-label="Token setup steps"
+            className="flex items-center gap-2 border-b border-[var(--border)] px-4 py-2 sm:gap-5 sm:px-6"
+          >
+            <li
+              className="setup-step"
+              aria-current={step === "configure" ? "step" : undefined}
+            >
+              <span className="setup-step-number">
+                {step === "review" ? <Icon name="check" size={12} /> : "01"}
+              </span>
+              <span>Configure access</span>
+            </li>
+            <li aria-hidden="true" className="text-[var(--border)]">
+              <Icon name="arrow" size={14} />
+            </li>
+            <li
+              className="setup-step"
+              aria-current={step === "review" ? "step" : undefined}
+            >
+              <span className="setup-step-number">02</span>
+              <span>Review & issue</span>
+            </li>
+          </ol>
+          {step === "configure" ? (
+            <>
+              <h3 ref={configureHeading} tabIndex={-1} className="sr-only">
+                Access settings
+              </h3>
+              <div className="space-y-5 p-4 sm:p-6">
+                <div className="space-y-2">
+                  <label htmlFor="token-name" className="field-label">
+                    Token name
+                  </label>
+                  <Input
+                    id="token-name"
+                    value={name}
+                    onChange={(event) => setName(event.target.value)}
+                    placeholder="e.g. Living room agent"
+                    disabled={isSubmitting}
+                    maxLength={80}
+                  />
+                </div>
+                <DomainPermissionEditor
+                  groups={groups}
+                  onChange={setGroups}
+                  entities={entities}
+                  services={services}
+                  disabled={isSubmitting || isLoadingEntities || hasEntityError}
+                />
+              </div>
+              <div className="setup-actions">
+                <p className="text-xs leading-relaxed text-[var(--muted)]">
+                  {canSubmit
+                    ? `${summary.entityCount} entities · ${summary.serviceCount} services selected`
+                    : "Name your key and choose its access."}
+                </p>
+                <Button
+                  className="ml-auto"
+                  disabled={!canSubmit}
+                  onClick={() => setStep("review")}
+                >
+                  Review access
+                  <Icon name="arrow" size={15} />
+                </Button>
+              </div>
+            </>
+          ) : (
+            <>
+              <div className="space-y-5 p-4 sm:p-6">
+                <div>
+                  <h3
+                    ref={reviewHeading}
+                    tabIndex={-1}
+                    className="text-xl font-semibold tracking-tight outline-none"
+                  >
+                    Review your access
+                  </h3>
+                  <p className="mt-2 text-xs leading-relaxed text-[var(--muted)]">
+                    Check the scope below. Everything else stays out of reach.
+                  </p>
+                </div>
+                <div className="flex items-center gap-3 rounded-lg border border-[var(--border)] bg-[var(--surface-muted)] p-4">
+                  <Icon
+                    name="key"
+                    size={19}
+                    className="shrink-0 text-[var(--primary)]"
+                  />
+                  <div className="min-w-0">
+                    <p className="studio-label">Token name</p>
+                    <p className="mt-1 break-words text-sm font-semibold [overflow-wrap:anywhere]">
+                      {name}
+                    </p>
+                  </div>
+                </div>
+                <PermissionReview groups={groups} entities={entities} />
+                <p className="flex items-start gap-2 border-t border-[var(--border)] pt-4 text-xs leading-relaxed text-[var(--muted)]">
+                  <Icon name="lock" size={14} className="mt-0.5 shrink-0" />
+                  Your token appears once. Keep it private. Area, device, floor,
+                  and label targets remain blocked.
+                </p>
+              </div>
+              <div className="setup-actions">
+                <Button
+                  variant="ghost"
+                  disabled={isSubmitting}
+                  onClick={() => setStep("configure")}
+                >
+                  <Icon name="arrow" size={14} className="rotate-180" />
+                  Edit access
+                </Button>
+                <Button
+                  disabled={!canSubmit || isSubmitting}
+                  onClick={() => onCreate({ name: name.trim(), permissions })}
+                >
+                  {isSubmitting ? (
+                    <>
+                      <span className="loading-spinner" />
+                      Issuing token…
+                    </>
+                  ) : (
+                    <>
+                      Issue token
+                      <Icon name="key" size={15} />
+                    </>
+                  )}
+                </Button>
+              </div>
+            </>
+          )}
+        </section>
+        <AccessSummary groups={groups} tokenName={name} />
+      </div>
+      {helpOpen ? (
+        <HomeAssistantHelpDialog onClose={() => setHelpOpen(false)} />
       ) : null}
     </div>
   );
