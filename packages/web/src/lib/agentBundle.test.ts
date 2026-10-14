@@ -33,6 +33,12 @@ const samplePermissions: TokenPermission[] = [
   }
 ];
 
+test("configured public API URL overrides the Ingress and local bundle defaults", () => {
+  const ingress = { protocol: "http:", hostname: "homeassistant.local", port: "8123", origin: "http://homeassistant.local:8123", pathname: "/api/hassio_ingress/fixture/" };
+  assert.equal(getDefaultGatekeeperBaseUrl(ingress, "https://gatekeeper.example.com"), "https://gatekeeper.example.com");
+  assert.equal(getDefaultGatekeeperBaseUrl(ingress, null), "http://homeassistant.local:4283");
+});
+
 test("projects exact service and state capabilities from permissions", () => {
   assert.deepEqual(projectAgentCapabilities(samplePermissions), {
     serviceActions: [

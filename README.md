@@ -40,7 +40,28 @@ https://github.com/wookingwoo/ha-gatekeeper
 
 The add-on uses Home Assistant Ingress for the admin UI and the Supervisor API proxy for Home Assistant access, so add-on installs do not require a Home Assistant long-lived access token.
 
-The public Gatekeeper API port is disabled by default. To allow trusted LAN agents to call it directly, enable the `expose_api` add-on option, map container port `8080/tcp` in the Home Assistant **Network** section, and use a generated Gatekeeper bearer token.
+The LAN Gatekeeper API is disabled by default. To allow trusted LAN agents to call it directly, enable the `expose_api` add-on option, map container port `8080/tcp` in the Home Assistant **Network** section, and use a generated Gatekeeper bearer token.
+
+### Public HTTPS access with Cloudflare Tunnel
+
+The add-on includes an optional Cloudflare Tunnel connector. Outside callers can use a public HTTPS URL and a scoped Gatekeeper bearer token, without installing a VPN or opening router ports.
+
+1. Create a named, remotely managed Cloudflare Tunnel and a public hostname such as `gatekeeper.example.com`.
+2. Configure that hostname's service as **HTTP**, URL **`http://127.0.0.1:8081`**. This is the API-only listener inside the Gatekeeper container. Do not use the Ingress/admin port `8080`.
+3. In the Gatekeeper add-on options, set:
+
+   ```yaml
+   cloudflare_tunnel_enabled: true
+   cloudflare_tunnel_token: "<CLOUDFLARE_TUNNEL_CONNECTOR_TOKEN>"
+   cloudflare_public_url: "https://gatekeeper.example.com"
+   ```
+
+4. Restart the add-on. Leave `expose_api: false` unless you also want direct LAN API access. No host port mapping is needed for the tunnel.
+5. Issue scoped Gatekeeper tokens in the Ingress admin UI. The public URL is filled into request examples and agent setup bundles automatically.
+
+The tunnel listener exposes only capabilities, service calls and state reads; admin pages and Swagger documentation are not served there. Gatekeeper still authenticates and authorizes every API call. Cloudflare account/domain/hostname setup is required once; the add-on does not create those resources for you. The connector token is a secret for operating your tunnel and must never be given to API callers.
+
+See [the add-on documentation](addons/ha-gatekeeper/DOCS.md#cloudflare-tunnel) for setup and troubleshooting. The existing local stdio MCP adapter can use the public URL as `GATEKEEPER_BASE_URL`. An HTTP MCP endpoint for cloud-hosted MCP clients is not included.
 
 Add-on releases use prebuilt GHCR images at `ghcr.io/wookingwoo/ha-gatekeeper`, tagged by add-on version.
 
@@ -235,3 +256,15 @@ See [SECURITY.md](SECURITY.md) for reporting vulnerabilities.
 ## License
 
 Licensed under the MIT License. See [LICENSE](LICENSE).
+
+## Runtime protection and limits
+
+`public_api_ip_rate_limit` defaults to **300 requests per IP per minute** (integer 1..2147483647). It bounds public API traffic before authentication, including failed token attempts; the existing token budget also applies after authentication. LAN callers are identified by the socket address. Only the dedicated tunnel loopback listener trusts a valid `CF-Connecting-IP`; ordinary forwarded headers never override a LAN caller's identity. Keep the connector's service URL at `http://127.0.0.1:8081` and do not expose that listener through another local proxy.
+
+`ha_request_timeout_seconds` defaults to **30 seconds** (integer 1..600). It bounds waiting for Home Assistant response headers and bodies, and shutdown cancels pending upstream requests. A timed-out or canceled service call may already have executed in Home Assistant; check state before retrying. Standalone deployments use `HA_REQUEST_TIMEOUT_MS` (1..2147483647) and `PUBLIC_API_IP_RATE_LIMIT`.
+
+Startup briefly uses root to prepare only known `/data` files, then migrations, the server and connector run as UID/GID 1000 with all Linux capabilities removed and no-new-privs enabled. Existing valid root-owned secrets and SQLite files are reassigned without changing their contents, preserving issued tokens. The data directory is private (0700), secrets and database files are 0600, and Supervisor options remain root-owned 0600. Unexpected links, hard links or special files at known data paths stop startup for operator repair; restore valid files from a backup rather than relaxing permissions. Back up `/data` before upgrading. Application code and binaries remain root-owned.
+
+The bundled enforce-mode AppArmor profile narrows file access. A root-owned native launcher reads the installed enforcing profile name and asks the kernel to stack its connector child before executing cloudflared, without `/data`, application code, shell execution or parent process environment/memory access. AppArmor does **not** filter destination IPs or provide complete isolation of all processes sharing a UID. External VLAN/firewall rules are still required to contain LAN access from this add-on. Keep Home Assistant's protection mode enabled; no extra host mounts or privileged capabilities are required.
+
+Before production, verify that the actual Home Assistant host advertises AppArmor `domain/stack` and `domain/post_nnp_subset` support under `/sys/kernel/security/apparmor/features/`. Inspect the server and connector's `/proc/<pid>/attr/apparmor/current` from the host (the server should show the Supervisor-installed profile in `enforce`, and cloudflared both that parent profile and its `//cloudflared` subprofile, joined by `//&` in the label). The launcher preserves no-new-privs and refuses to launch without the enforcing HA Gatekeeper profile or if stacking its child fails. AppArmor enforcement on Home Assistant is therefore required for the tunnel; there is no parent-only or unconfined fallback. Treat an absent child label as failed verification and keep tunnel access disabled until repaired. Check Supervisor/host logs for AppArmor denials while exercising Ingress, fresh and upgrade migrations, public API, connector startup and shutdown. Confirm connector reads of `/data/secrets.json` and parent `/proc/<server-pid>/environ`, and execution of a shell or the launcher, are denied. Verify Go SIGURG preemption and normal TERM shutdown without denials. The server label must remain the parent only. The development Docker kernel lacks AppArmor support, so offline parser validation alone does not establish kernel enforcement or runtime compatibility. Do not switch to complain mode to pass verification.

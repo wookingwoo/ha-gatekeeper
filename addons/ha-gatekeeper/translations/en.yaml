@@ -1,0 +1,21 @@
+configuration:
+  expose_api:
+    name: Enable LAN API
+    description: Allow direct requests on the mapped LAN port. Not required for Cloudflare Tunnel access.
+  log_level:
+    name: Log level
+  cloudflare_tunnel_enabled:
+    name: Enable Cloudflare Tunnel
+    description: Run the built-in connector. Configure its Cloudflare service URL as http://127.0.0.1:8081.
+  cloudflare_tunnel_token:
+    name: Cloudflare tunnel token
+    description: Connector token from your named tunnel, not a Cloudflare API key or a Gatekeeper bearer token. Keep it private.
+  cloudflare_public_url:
+    name: Public Gatekeeper URL
+    description: Your HTTPS hostname, such as https://gatekeeper.example.com. Used in agent setup bundles.
+  public_api_ip_rate_limit:
+    name: Public API requests per IP per minute
+    description: Positive integer; defaults to 300 (1..2147483647).
+  ha_request_timeout_seconds:
+    name: Home Assistant request timeout (seconds)
+    description: Positive integer; defaults to 30 (1..600).

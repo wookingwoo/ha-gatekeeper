@@ -27,6 +27,7 @@ import {
 } from "../lib/permissionGroups";
 
 type TokensPageProps = {
+  publicApiBaseUrl?: string | null;
   clients: Client[];
   entities: HaEntity[];
   services: HaServiceCatalog[];
@@ -67,11 +68,12 @@ export function TokensPage({
   onRotate,
   onDelete,
   onSavePermissions,
+  publicApiBaseUrl,
 }: TokensPageProps) {
   const [editingClientId, setEditingClientId] = useState<string | null>(null);
   const [draftGroups, setDraftGroups] = useState<PermissionGroup[]>([]);
   const [bundleBaseUrl, setBundleBaseUrl] = useState(() =>
-    getDefaultGatekeeperBaseUrl(),
+    getDefaultGatekeeperBaseUrl(undefined, publicApiBaseUrl),
   );
   const [bundleErrorClientId, setBundleErrorClientId] = useState<string | null>(
     null,

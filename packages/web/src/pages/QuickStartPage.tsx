@@ -33,6 +33,7 @@ export function QuickStartPage({
   onClearResult,
   isSubmitting,
   hasSubmitError,
+  publicApiBaseUrl,
 }: {
   entities: HaEntity[];
   services: HaServiceCatalog[];
@@ -44,6 +45,7 @@ export function QuickStartPage({
   onClearResult: () => void;
   isSubmitting: boolean;
   hasSubmitError: boolean;
+  publicApiBaseUrl?: string | null;
 }) {
   const [name, setName] = useState("");
   const [groups, setGroups] = useState(createDefaultGroups);
@@ -73,6 +75,7 @@ export function QuickStartPage({
   if (result)
     return (
       <TokenIssued
+        publicApiBaseUrl={publicApiBaseUrl}
         result={result}
         onCreateAnother={() => {
           setName("");

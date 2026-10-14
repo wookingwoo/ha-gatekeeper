@@ -18,7 +18,8 @@ export type TestDatabase = {
 export function createTestDatabase(): TestDatabase {
   const dir = mkdtempSync(path.join(tmpdir(), "hgk-test-"));
   const databaseUrl = `file:${path.join(dir, "test.db")}`;
-  // Prisma's schema engine requires the SQLite file to exist before connecting.
+  // Prisma 5's schema engine can fail without a diagnostic when the SQLite file
+  // does not exist yet. Create the empty fixture before applying its schema.
   writeFileSync(path.join(dir, "test.db"), "");
 
   // execSync always runs through a shell, which sidesteps Windows failing to exec the

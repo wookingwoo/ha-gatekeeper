@@ -256,3 +256,25 @@ test("serves the Swagger UI page", async () => {
   assert.equal(response.statusCode, 200);
   assert.match(String(response.headers["content-type"]), /^text\/html/);
 });
+
+ test("spoofed known prefixes cannot consume verified client quotas; quotas remain independent", async () => {
+  const isolated = Fastify({logger: false});
+  await isolated.register(publicApiRoutes, {prefix: "/api"});
+  try {
+    for (let i = 0; i < 100; i++) {
+      assert.equal((await isolated.inject({url: "/api/capabilities", headers: {authorization: `Bearer ${active.apiKey.slice(0, 12)}spoof-${i}`}})).statusCode, 401);
+    }
+    for (let i = 0; i < 100; i++) {
+      assert.equal((await isolated.inject({url: "/api/capabilities", headers: {authorization: `Bearer ${active.apiKey}`}})).statusCode, 200);
+    }
+    const before = await auditCount();
+    assert.equal((await isolated.inject({url: "/api/capabilities", headers: {authorization: `Bearer ${active.apiKey}`}})).statusCode, 429);
+    assert.equal(await auditCount(), before);
+    assert.equal((await isolated.inject({url: "/api/capabilities", headers: {authorization: `Bearer ${serviceOnlySeed.apiKey}`}})).statusCode, 200);
+  } finally {await isolated.close();}
+});
+ test("LAN ignores forged forwarding headers in public audits", async () => {
+  const response = await app.inject({url: "/api/capabilities", remoteAddress: "::ffff:192.0.2.80", headers: {"cf-connecting-ip": "203.0.113.80", "x-forwarded-for": "203.0.113.81", "x-ingress-path": "/api/hassio_ingress/forged"}});
+  assert.equal(response.statusCode, 401);
+  assert.equal(await prisma.auditLog.count({where: {ip: "192.0.2.80"}}), 1);
+});

@@ -12,7 +12,7 @@ import { ErrorNotice } from "./Feedback";
 import { Input } from "./ui/input";
 import { Button } from "./ui/button";
 
-function makeCurl(permissions: TokenPermission[]) {
+function makeCurl(permissions: TokenPermission[], baseUrl: string) {
   const service = permissions.find(
     (permission) => permission.kind === "service",
   );
@@ -21,7 +21,7 @@ function makeCurl(permissions: TokenPermission[]) {
       ? { entity_id: service.entityIds[0] }
       : {};
     return [
-      `curl -X POST /api/services/${service.domain}/${service.services[0]}`,
+      `curl -X POST ${baseUrl}/api/services/${encodeURIComponent(service.domain)}/${encodeURIComponent(service.services[0])}`,
       '  -H "Authorization: Bearer <TOKEN>"',
       '  -H "Content-Type: application/json"',
       `  -d '${JSON.stringify(body)}'`,
@@ -30,7 +30,7 @@ function makeCurl(permissions: TokenPermission[]) {
   const state = permissions.find((permission) => permission.kind === "state");
   return state?.kind === "state"
     ? [
-        `curl /api/states/${state.entityIds[0]}`,
+        `curl ${baseUrl}/api/states/${encodeURIComponent(state.entityIds[0])}`,
         '  -H "Authorization: Bearer <TOKEN>"',
       ].join(" \\\n")
     : "";
@@ -39,14 +39,21 @@ function makeCurl(permissions: TokenPermission[]) {
 export function TokenIssued({
   result,
   onCreateAnother,
+  publicApiBaseUrl,
 }: {
   result: QuickSetupResult;
   onCreateAnother: () => void;
+  publicApiBaseUrl?: string | null;
 }) {
   const [includeToken, setIncludeToken] = useState(false);
-  const [baseUrl, setBaseUrl] = useState(getDefaultGatekeeperBaseUrl);
+  const [baseUrl, setBaseUrl] = useState(() =>
+    getDefaultGatekeeperBaseUrl(undefined, publicApiBaseUrl),
+  );
   const [bundleError, setBundleError] = useState(false);
-  const curl = makeCurl(result.client.permissions);
+  const curl = makeCurl(
+    result.client.permissions,
+    baseUrl.trim().replace(/\/+$/, ""),
+  );
   function downloadBundle() {
     setBundleError(false);
     try {

@@ -160,10 +160,15 @@ export const adminRoutes: FastifyPluginAsync = async (app) => {
     return reply.send({ ok: true });
   });
 
-  app.get("/me", async (request) => ({
-    authenticated: getAdminAuthenticated(request),
-    addonMode: env.HA_GATEKEEPER_ADDON
-  }));
+  app.get("/me", async (request) => {
+    const authenticated = getAdminAuthenticated(request);
+    return {
+      authenticated,
+      addonMode: env.HA_GATEKEEPER_ADDON,
+      publicApiBaseUrl: authenticated && env.CLOUDFLARE_TUNNEL_ENABLED
+        ? env.CLOUDFLARE_PUBLIC_URL : null
+    };
+  });
 
   app.get("/ha/services", async (request, reply) => {
     if (!ensureAdmin(request, reply)) {
